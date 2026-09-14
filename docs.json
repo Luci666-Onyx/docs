@@ -2,7 +2,10 @@
   "$schema": "https://mintlify.com/docs.json",
   "name": "Tari",
   "theme": "luma",
-  "favicon": "/favicon.svg",
+  "favicon": {
+    "light": "/images/Tari-White.svg",
+    "dark": "/images/Tari-Black.svg"
+  },
   "colors": {
     "primary": "#932fff",
     "light": "#ffffff",
@@ -135,5 +138,10 @@
       "discord": "https://discord.gg/tari",
       "x": "https://twitter.com/tari"
     }
+  },
+  "logo": {
+    "light": "/images/Tari-White@2x.png",
+    "dark": "/images/Tari-Black@2x.png",
+    "href": "https://tari.com"
   }
 }
