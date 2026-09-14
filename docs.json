@@ -22,7 +22,7 @@
   "navbar": {
     "primary": {
       "type": "github",
-      "href": "https://github.com/tari-project/tari"
+      "href": "https://github.com/tari-project"
     },
     "links": []
   },
@@ -144,5 +144,11 @@
     "light": "/images/Tari-White@2x.png",
     "dark": "/images/Tari-Black@2x.png",
     "href": "https://tari.com"
+  },
+  "appearance": {
+    "strict": true
+  },
+  "background": {
+    "decoration": "gradient"
   }
 }
