@@ -27,9 +27,9 @@
     "links": []
   },
   "navigation": {
-    "tabs": [
+    "versions": [
       {
-        "tab": "Get Started",
+        "version": "Get Started",
         "groups": [
           {
             "group": "Introduction",
@@ -60,7 +60,7 @@
         ]
       },
       {
-        "tab": "Exchange Integration",
+        "version": "Exchange Integration",
         "groups": [
           {
             "group": "Overview",
@@ -95,7 +95,7 @@
         ]
       },
       {
-        "tab": "Ootle (L2)",
+        "version": "Ootle (L2)",
         "groups": [
           {
             "group": "Introduction",
@@ -132,7 +132,7 @@
         ]
       },
       {
-        "tab": "lessons",
+        "version": "Lessons",
         "pages": [
           "sources/site/tari.com/lessons/How_Tari_Works-Part_I",
           "sources/site/tari.com/lessons/Execute_Tari_Node_Windows_10",
@@ -142,6 +142,13 @@
           "sources/site/tari.com/lessons/03_signatures",
           "sources/site/tari.com/lessons/05_emoji_id",
           "sources/site/tari.com/lessons/06_tari_comms_i"
+        ]
+      },
+      {
+        "version": "Updates",
+        "pages": [
+          "sources/site/tari.com/updates/2025-02-14-update-142",
+          "sources/site/tari.com/updates/2026-09-01-update-143"
         ]
       }
     ]
