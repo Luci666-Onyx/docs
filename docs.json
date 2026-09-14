@@ -161,7 +161,7 @@
     "href": "https://tari.com"
   },
   "appearance": {
-    "strict": true,
+    "strict": false,
     "default": "system"
   },
   "background": {
