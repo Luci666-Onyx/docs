@@ -149,7 +149,10 @@
     "socials": {
       "github": "https://github.com/tari-project/tari",
       "discord": "https://discord.gg/tari",
-      "x": "https://twitter.com/tari"
+      "x": "https://twitter.com/tari",
+      "bluesky": "https://bsky.app/profile/tariproject.bsky.social",
+      "telegram": "https://t.me/tariproject",
+      "youtube": "https://youtube.com/@taricommunity"
     }
   },
   "logo": {
