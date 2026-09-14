@@ -1,5 +1,6 @@
 ---
-title: "04_how_tari_works_ii"
+sidebarTitle: "How Tari Works - Part II"
+title: "How Tari Works - Part II"
 ---
 
 # How Tari Works - Part II

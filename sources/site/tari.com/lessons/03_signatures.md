@@ -1,5 +1,6 @@
 ---
-title: "03_signatures"
+sidebarTitle: "Signing amessage"
+title: "Signing amessage"
 ---
 
 # Signing a Message

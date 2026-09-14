@@ -1,5 +1,6 @@
 ---
-title: "00a_Execute_Tari_Node_Windows_10"
+sidebarTitle: "Execute Tari Node Windows on 10"
+title: "Execute Tari Node Windows on 10"
 ---
 
 # How to run a Tari Node on Windows 10

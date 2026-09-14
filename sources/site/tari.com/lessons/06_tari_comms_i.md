@@ -1,5 +1,6 @@
 ---
-title: "06_tari_comms_i"
+sidebarTitle: "An In-depth Introduction"
+title: "An In-depth Introduction"
 ---
 
 # Tari Comms - An In-depth Introduction

@@ -1,5 +1,6 @@
 ---
-title: "05_emoji_id"
+sidebarTitle: "Working with Emoji ID"
+title: "Working with Emoji ID"
 ---
 
 # Working with Emoji ID

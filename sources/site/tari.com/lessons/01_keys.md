@@ -1,5 +1,6 @@
 ---
-title: "01_keys"
+sidebarTitle: "Introduction to Keys"
+title: "Introduction to Keys"
 ---
 
 # Introduction to Keys

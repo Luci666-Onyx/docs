@@ -1,5 +1,6 @@
 ---
-title: "00_introduction"
+sidebarTitle: "Introduction"
+title: "Introduction"
 ---
 
 # Learning the Tari Codebase
