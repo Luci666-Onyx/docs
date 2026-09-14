@@ -1,0 +1,119 @@
+---
+title: "Monitor Deposits and Credit User Accounts for XTM"
+sidebarTitle: "Deposits"
+description: "Generate per-user deposit addresses with Payment IDs, stream incoming transactions, and reliably credit user accounts in your exchange."
+---
+
+When a user deposits XTM, they send funds to a **one-sided address** that has a Payment ID cryptographically embedded in it. Your exchange generates a unique address per user by calling the wallet gRPC and encoding a custom Payment ID into the address bytes. Your monitoring service then watches for confirmed inbound transactions, extracts that Payment ID, looks up the matching user record, and credits their balance. The entire flow is designed to be idempotent so that no user is ever double-credited, even if your service restarts mid-flight.
+
+<Steps>
+
+### Generate a deposit address per user
+
+Before a user can deposit, your exchange must generate a unique address tied to their account. You do this by calling `GetPaymentIdAddress` on the wallet gRPC, passing a structured Payment ID as a UTF-8 byte payload. The wallet encodes this Payment ID into the address itself — anyone sending XTM to that address will automatically include your identifier in the transaction.
+
+**Payment ID format:**
+
+```text
+deposit-{userId}-{timestamp}-{randomBytes}
+```
+
+Use a cryptographically random suffix (at least 8 bytes) alongside the timestamp to guarantee global uniqueness across accounts. Keep the total length under 256 bytes or the wallet will reject it with `PaymentIdTooLarge`.
+
+**Example using grpcurl:**
+
+```bash
+PAYMENT_ID="deposit-user123-$(date +%s)"
+PAYMENT_ID_B64=$(echo -n "$PAYMENT_ID" | base64 -w 0)
+grpcurl -plaintext -d "{\"payment_id\": \"$PAYMENT_ID_B64\"}" \
+  localhost:18143 tari.rpc.Wallet/GetPaymentIdAddress
+```
+
+The response includes both a Base58 address and an Emoji ID address. Present both to the user — the Emoji ID is the preferred format because its larger alphabet is shorter, more readable, and includes a built-in checksum that prevents transcription errors.
+
+After generating the address, persist the following record to your database:
+
+```json
+{
+  "userId": "user123",
+  "paymentId": "deposit-user123-1717200000-a3f9c1d2",
+  "address": "<one_sided_address_base58>",
+  "status": "pending",
+  "createdAt": "2025-06-01T00:00:00Z"
+}
+```
+
+Return the `one_sided_address_base58` and `one_sided_address_emoji` fields to the user for display and QR code generation.
+
+### Monitor for incoming transactions
+
+Your monitoring service must run continuously and catch every inbound transaction associated with your walletю There are two approaches; use streaming whenever possible and fall back to polling if the connection is interrupted.
+
+**Method 1 — Real-time streaming (preferred):**
+
+Open a persistent `StreamTransactionEvents` stream from the wallet gRPC. For each event, apply the following filter before acting on it:
+
+- `event.type == "Mined"` — the transaction is confirmed in a block
+- `event.direction == "Inbound"` — the funds are arriving at your wallet, not leaving it
+
+Any event that fails either condition should be ignored.
+
+**Method 2 — Polling fallback:**
+
+If the streaming connection is unavailable, poll `GetCompletedTransactions` every 30 seconds. Apply the same three-field filter to every result:
+
+```text
+transaction.direction == "INBOUND"
+  AND transaction.status == "CONFIRMED"
+  AND transaction.tx_id NOT IN processedTransactions
+```
+
+Only transactions that are fully `CONFIRMED` on-chain should trigger a credit. `BROADCAST` status means the transaction has been submitted to the network but not yet mined — do not credit at this stage.
+
+<Note>
+  Maintain a persistent set (in your database, not in memory) of already-processed transaction IDs. This is your primary defence against double-crediting in the event of a service restart, a reconnect, or a polling overlap.
+</Note>
+
+### Process confirmed deposits
+
+Once you have a confirmed inbound transaction that passes the filter, execute the following logic to credit the user:
+
+1. **Extract the Payment ID** from `transaction.payment_id` bytes. Decode as UTF-8.
+2. **Look up the deposit record** by Payment ID in your database. If no record is found, log the unknown Payment ID and skip — it may belong to another system.
+3. **Validate the amount.** Convert from microXTM to XTM by dividing by `1,000,000`. Reject deposits below your configured minimum.
+4. **Atomically credit the user** inside a single database transaction:
+   - Add the XTM amount to the user's available balance
+   - Mark the deposit record as `processed`, storing the `tx_id`
+   - Insert a deposit history entry for auditing
+5. **Notify the user** that the deposit has been credited.
+
+The conversion formula is:
+
+```text
+amountXTM = transaction.amount / 1_000_000
+```
+
+On database failure, roll back the entire transaction and add the `tx_id` to a retry queue so it can be re-attempted without risk of duplication.
+
+<Warning>
+  Always execute balance updates inside an **atomic database transaction** that covers the balance credit, the deposit status update, and the history insert together. If any step fails, roll back all three. Crediting the balance and then failing to mark the deposit as processed is the most common source of double-credit bugs.
+</Warning>
+
+</Steps>
+
+## Idempotency
+
+Track every processed `tx_id` in a dedicated database table. Before processing any transaction, check this table first. If the ID is already present, skip the transaction entirely and log it. This check must happen inside the atomic database transaction described in Step 3 — using a `SELECT ... FOR UPDATE` or equivalent locking mechanism — to be safe under concurrent processing.
+
+```json
+{
+  "table": "processed_deposits",
+  "columns": ["tx_id", "user_id", "amount_xtm", "processed_at"]
+}
+```
+
+Duplicate events are normal: your streaming consumer may replay events on reconnect, and polling windows can overlap. Your idempotency table is the final safety net.
+
+## Testing on Testnet
+
+Before going live on mainnet, run the full deposit flow against the Tari testnet. Generate a test Payment ID, send a small amount from a testnet wallet, and confirm that your service detects the event, extracts the Payment ID, looks up the record, and credits the balance. Verify that sending the same transaction ID a second time (simulated) is safely ignored.

@@ -1,0 +1,276 @@
+---
+title: "tari_template_lib API Overview for Ootle Development"
+sidebarTitle: "API Overview"
+description: "High-level overview of tari_template_lib modules, key structs like ResourceBuilder and Vault, and global functions for Ootle template development."
+---
+
+The `tari_template_lib` crate is the complete SDK for writing Ootle templates. It provides everything you need: the `#[template]` macro, builders for resources and components, vault and bucket types, access control primitives, and utilities for randomness, consensus, and events. This page gives you a high-level map of the library's contents so you can find what you need quickly.
+
+## Getting Started
+
+Import everything you need with the prelude wildcard. For the vast majority of templates, this single line is sufficient:
+
+```rust
+use tari_template_lib::prelude::*;
+// Includes: Amount, ResourceAddress, ComponentAddress, Vault, Bucket,
+//           ResourceBuilder, ComponentBuilder, AccessRules, AccessRule,
+//           ComponentAccessRules, NonFungibleId, Metadata, and more.
+```
+
+For the complete API reference and rustdoc, see the [crates.io documentation](https://docs.rs/tari_template_lib/latest/tari_template_lib/).
+
+## Modules
+
+| Module | What it contains |
+|--------|-----------------|
+| `prelude` | Re-exports all essential items — use `tari_template_lib::prelude::*` |
+| `auth` | Authentication and authorization utilities; working with identities and proofs |
+| `args` | Utilities for working with method arguments |
+| `component` | `ComponentBuilder`, `ComponentAddressAllocation`, current component address |
+| `consensus` | Access consensus-level values (`current_epoch`, `current_epoch_hash`) |
+| `events` | `emit_event!` macro and event-related types |
+| `models` | On-chain data structures used across the library |
+| `rand` | Deterministic random bytes from the execution engine |
+| `resource` | `ResourceBuilder`, `ResourceManager`, resource types |
+| `template` | Template-level operations and metadata |
+| `types` | Re-exports `tari_template_lib_types` — `Amount`, `ResourceAddress`, `ComponentAddress`, `VaultId`, `AccessRule`, and all fundamental on-chain types |
+
+## Key Structs and Builders
+
+### `ComponentBuilder` / `Component<T>`
+
+Used to deploy a new component instance to the chain with full control over its properties.
+
+<CodeGroup>
+```rust ComponentBuilder Usage
+use tari_template_lib::prelude::*;
+
+// Basic creation (minimal)
+let component = Component::new(my_state).create();
+
+// Full control
+let component = Component::new(my_state)
+    .with_access_rules(ComponentAccessRules::new()
+        .method("deposit", rule![allow_all])
+        .default(rule![deny_all])
+    )
+    .with_owner_rule(OwnerRule::OwnedBySigner) // default
+    .with_address_allocation(alloc)           // optional; allows calling in same tx
+    .create();
+```
+
+| Method | Description |
+|--------|-------------|
+| `Component::new(state)` | Initialize the builder with component state |
+| `.with_access_rules(rules)` | Attach `ComponentAccessRules` to the component |
+| `.with_owner_rule(rule)` | Override the ownership rule (default: `OwnedBySigner`) |
+| `.with_address_allocation(alloc)` | Bind to a pre-allocated `ComponentAddressAllocation` |
+| `.create()` | Deploy the component and return `Component<T>` |
+</CodeGroup>
+
+### `ResourceBuilder`
+
+Creates new on-chain resources — fungible tokens, NFTs, or stealth assets. Returns a `ResourceAddress` from `.build()` or a `(ResourceAddress, Bucket)` / `Bucket` when using `.initial_supply()`.
+
+<CodeGroup>
+```rust ResourceBuilder Usage
+use tari_template_lib::prelude::*;
+
+// Fungible token
+let token_address = ResourceBuilder::public_fungible()
+    .with_token_symbol("TOK")
+    .with_divisibility(8)
+    .metadata("name", "My Token")
+    .mintable(rule!(allow_all), LOCKED)
+    .burnable(rule!(deny_all), LOCKED)
+    .build();
+
+// Non-fungible resource
+let nft_address = ResourceBuilder::non_fungible()
+    .with_token_symbol("NFT")
+    .metadata("name", "My NFTs")
+    .build();
+
+// Fungible with initial supply (returns Bucket)
+let (addr, bucket) = ResourceBuilder::public_fungible()
+    .with_token_symbol("TKN")
+    .initial_supply(Amount(1_000_000));
+
+// Stealth resource
+let stealth_bucket = ResourceBuilder::stealth()
+    .with_token_symbol("PRIV")
+    .with_divisibility(6)
+    .initial_supply(Amount(1_000_000));
+```
+
+| Method | Description |
+|--------|-------------|
+| `ResourceBuilder::public_fungible()` | Start building a public fungible token |
+| `ResourceBuilder::non_fungible()` | Start building a non-fungible resource |
+| `ResourceBuilder::stealth()` | Start building a stealth (confidential UTXO) resource |
+| `.with_token_symbol(symbol)` | Set the display symbol (3–5 chars) |
+| `.with_divisibility(n)` | Set decimal places (default: 8) |
+| `.metadata(key, value)` | Attach key-value metadata |
+| `.mintable(rule, updater)` | Set mint access rule and who can change it |
+| `.burnable(rule, updater)` | Set burn access rule and who can change it |
+| `.recallable(rule, updater)` | Set recall access rule |
+| `.freezable(rule, updater)` | Set freeze access rule |
+| `.withdrawable(rule, updater)` | Set withdraw access rule |
+| `.depositable(rule, updater)` | Set deposit access rule |
+| `.initial_supply(amount)` | Mint tokens during creation; returns `Bucket` |
+| `.build()` | Create the resource and return its `ResourceAddress` |
+</CodeGroup>
+
+### `ComponentAccessRules`
+
+Defines the per-method and default authorization policy for a component.
+
+<CodeGroup>
+```rust ComponentAccessRules Usage
+use tari_template_lib::prelude::*;
+
+let access_rules = ComponentAccessRules::new()
+    // Explicitly public methods
+    .method("deposit", rule![allow_all])
+    .method("get_balance", rule![allow_all])
+    // Badge-gated method
+    .method("withdraw", rule![require(admin_badge)])
+    // Default for all other methods (default is deny_all if not set)
+    .default(rule![deny_all]);
+```
+
+| Method | Description |
+|--------|-------------|
+| `ComponentAccessRules::new()` | Create a new empty ruleset |
+| `.method(name, rule)` | Set the access rule for a named method |
+| `.default(rule)` | Set the fallback rule for methods not listed |
+| `ComponentAccessRules::allow_all()` | Convenience: allow all callers for all methods |
+</CodeGroup>
+
+### `Vault`
+
+A persistent on-chain container inside a component that holds exactly one resource type.
+
+<CodeGroup>
+```rust Vault Usage
+use tari_template_lib::prelude::*;
+
+// Create vaults
+let empty_vault = Vault::new_empty(resource_address);
+let funded_vault = Vault::from_bucket(bucket);
+
+// Use vaults (require &mut self on the component method)
+vault.deposit(incoming_bucket);
+let outgoing_bucket = vault.withdraw(Amount::from(100u64));
+let specific_nft = vault.withdraw_non_fungible(NonFungibleId::from_u64(1));
+let balance: Amount = vault.balance();
+let addr: ResourceAddress = vault.resource_address();
+let manager: ResourceManager = vault.get_resource_manager();
+```
+
+| Method | Description |
+|--------|-------------|
+| `Vault::new_empty(address)` | Create an empty vault for a specific resource |
+| `Vault::from_bucket(bucket)` | Create a vault pre-loaded with a bucket |
+| `vault.deposit(bucket)` | Move all of a bucket's contents into the vault |
+| `vault.withdraw(amount)` | Remove `amount` tokens and return them as a `Bucket` |
+| `vault.withdraw_non_fungible(id)` | Remove a specific NFT and return it as a `Bucket` |
+| `vault.balance()` | Return the current token count as `Amount` |
+| `vault.resource_address()` | Return the `ResourceAddress` of the held resource |
+| `vault.get_resource_manager()` | Return a `ResourceManager` for this vault's resource |
+</CodeGroup>
+
+### `Bucket`
+
+A temporary resource container used to move tokens between vaults and methods within a transaction. Buckets do not persist on-chain and must be consumed before the transaction ends.
+
+<CodeGroup>
+```rust Bucket Usage
+use tari_template_lib::prelude::*;
+
+let bucket: Bucket = vault.withdraw(Amount::from(100u64));
+
+// Inspect
+let amount: Amount = bucket.amount();
+let addr: ResourceAddress = bucket.resource_address();
+
+// Consume
+vault.deposit(bucket);            // deposit into a vault
+let split = bucket.take(Amount::from(10u64)); // split off a portion
+bucket.burn();                    // permanently destroy
+```
+
+| Method | Description |
+|--------|-------------|
+| `bucket.amount()` | Return the current token count |
+| `bucket.resource_address()` | Return the resource type this bucket holds |
+| `bucket.take(amount)` | Split out `amount` into a new bucket |
+| `bucket.burn()` | Permanently destroy the bucket's contents |
+</CodeGroup>
+
+## Global Functions and Macros
+
+These are available via `tari_template_lib::prelude::*`:
+
+| Name | Type | Description |
+|------|------|-------------|
+| `#[template]` | Attribute macro | Transforms a Rust module into a publishable Ootle template |
+| `#[template(stateless)]` | Attribute macro | Marks a template as stateless — no component is ever created |
+| `emit_event!(name, metadata)` | Macro | Emits a named event visible in the transaction receipt |
+| `info!(...)`, `warn!(...)`, `error!(...)` | Macros | Log messages included in the transaction receipt |
+| `args![...]` | Macro | Encode method call arguments |
+| `metadata![...]` | Macro | Construct a `Metadata` map |
+| `rule![...]` | Macro | Construct an `AccessRule` expression |
+| `rand::random_bytes(n)` | Function | Return `n` deterministic random bytes from the execution engine |
+| `Consensus::current_epoch()` | Function | Return the current consensus epoch as `u64` |
+| `Consensus::current_epoch_hash()` | Function | Return the current epoch hash |
+| `CallerContext::transaction_signer_public_key()` | Function | Return the authenticated public key of the transaction signer |
+| `ComponentManager::get(address)` | Function | Get a handle to call methods on another component |
+
+## Access Control Types
+
+| Type | Description |
+|------|-------------|
+| `AccessRule` | `AllowAll`, `DenyAll`, or `Restricted(...)` — one rule for one action |
+| `ComponentAccessRules` | Collection of per-method and default `AccessRule`s for a component |
+| `UpdateRule` | `Locked`, `Owner`, or `AccessRule(...)` — controls who can change a resource access rule |
+| `OwnerRule` | `OwnedBySigner` (default), `None`, or custom — controls the component owner identity |
+| `Proof` | Temporary witness that the caller holds a specific resource; used in authorization |
+
+## Event Emission
+
+Templates can emit named events that appear in the transaction receipt and can be indexed by block explorers:
+
+<CodeGroup>
+```rust Emitting Events
+use tari_template_lib::prelude::*;
+
+pub fn transfer(&mut self, to: ComponentAddress, amount: Amount) {
+    let bucket = self.vault.withdraw(amount);
+    ComponentManager::get(to).invoke("deposit", args![bucket]);
+
+    emit_event("transfer", metadata![
+        "from"   => CallerContext::transaction_signer_public_key().to_string(),
+        "to"     => to.to_string(),
+        "amount" => amount.to_string(),
+    ]);
+}
+```
+</CodeGroup>
+
+## Further Reading
+
+<CardGroup cols={2}>
+  <Card title="Types Reference" icon="code" href="/ootle/reference/types">
+    Detailed reference for Amount, ResourceAddress, ComponentAddress, and all fundamental on-chain types.
+  </Card>
+  <Card title="Template Overview" icon="file-code" href="/ootle/templates/overview">
+    Learn the fundamentals of the #[template] macro and component structure.
+  </Card>
+  <Card title="Access Control" icon="lock" href="/ootle/templates/access-control">
+    Deep dive into ComponentAccessRules and resource access rules.
+  </Card>
+  <Card title="crates.io Docs" icon="external-link" href="https://docs.rs/tari_template_lib/latest/tari_template_lib/">
+    Full rustdoc for tari_template_lib on docs.rs.
+  </Card>
+</CardGroup>

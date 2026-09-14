@@ -1,0 +1,237 @@
+---
+title: "Configure Your Minotari Node and Wallet"
+sidebarTitle: "Configuration"
+description: "Customize your Minotari node with config.toml settings for gRPC, network transport, ports, peer connections, and gRPC authentication."
+---
+
+The Minotari base node and console wallet are configured through a single `config.toml` file that is created automatically on first launch. Most default settings are fine for a personal node, but you will want to review and tune several settings for a production deployment — especially gRPC access, transport mode, and port exposure.
+
+## Config file location
+
+| Platform | Default path |
+|---|---|
+| Linux / macOS | `~/.tari/mainnet/config/config.toml` |
+| Windows | The path you specified during installation, e.g. `C:\Users\<name>\.tari\mainnet\config\config.toml` |
+
+To override the base directory, start the node with the `--base-path` (or `-b`) flag:
+
+```bash
+minotari_node --base-path /data/tari
+```
+
+The config file for that invocation will be at `/data/tari/mainnet/config/config.toml`.
+
+<Tip>
+  The config file is generated with all settings commented out and their defaults documented inline. Open it in a text editor, find the setting you want to change, uncomment the line, and set your value.
+</Tip>
+
+---
+
+## Network selection
+
+Set the active network at the top of the `[common]` section:
+
+<CodeGroup>
+```toml Mainnet
+[common]
+network = "mainnet"
+```
+
+```toml Testnet (Esmeralda)
+[common]
+network = "esmeralda"
+```
+
+```toml Nextnet
+[common]
+network = "nextnet"
+```
+</CodeGroup>
+
+You can also pass `--network <name>` on the command line, or set the `TARI_NETWORK` environment variable. The command-line flag takes precedence over the config file.
+
+---
+
+## gRPC settings
+
+The base node's gRPC server is enabled by default and listens on `127.0.0.1:18142`. The console wallet's gRPC server is disabled by default.
+
+<Warning>
+  Always bind gRPC to `127.0.0.1` (localhost), never to `0.0.0.0` or a public interface. The gRPC API has no built-in TLS — exposing it to the internet would allow anyone to query your node or wallet without authentication. If remote access is required, use an SSH tunnel or an authenticated reverse proxy.
+</Warning>
+
+<CodeGroup>
+```toml Base Node gRPC
+[base_node]
+# Enable the gRPC server (default = true for the node)
+grpc_enabled = true
+
+# Address and port the gRPC server binds to
+# Default: "/ip4/127.0.0.1/tcp/18142"
+grpc_address = "/ip4/127.0.0.1/tcp/18142"
+
+# Optional: require HTTP Basic Auth on all gRPC requests
+# grpc_authentication = { username = "admin", password = "s3cr3t" }
+```
+
+```toml Wallet gRPC
+[wallet]
+# Enable the gRPC server (default = false for the wallet)
+grpc_enabled = true
+
+# Address and port the wallet gRPC server binds to
+# Default: "/ip4/127.0.0.1/tcp/18143"
+grpc_address = "/ip4/127.0.0.1/tcp/18143"
+
+# Optional: require HTTP Basic Auth on all gRPC requests
+# grpc_authentication = { username = "admin", password = "s3cr3t" }
+```
+</CodeGroup>
+
+You can also enable wallet gRPC at startup without editing the config file:
+
+```bash
+minotari_console_wallet --grpc-enabled
+```
+
+### gRPC ports
+
+| Service | Default port |
+|---|---|
+| Base node gRPC | 18142 |
+| Console wallet gRPC | 18143 |
+
+---
+
+## P2P and transport settings
+
+Tari nodes communicate over an encrypted peer-to-peer network. You can use Tor (the default on Linux and macOS) or plain TCP if you have a static public IP address.
+
+### Tor transport (default)
+
+On Linux and macOS, Tor is built into the binaries via `libtor` — no separate Tor daemon is needed. On Windows, start `start_tor` before the node.
+
+<CodeGroup>
+```toml Tor (default — no changes needed)
+[base_node.p2p.transport]
+# "tor" is the default; you do not need to set this explicitly
+type = "tor"
+```
+</CodeGroup>
+
+### TCP transport (static public IP)
+
+If your server has a stable public IP address, you can bypass Tor entirely and use a direct TCP connection. This reduces latency and removes the Tor dependency.
+
+<CodeGroup>
+```toml TCP transport
+[base_node.p2p.transport]
+type = "tcp"
+
+# Your server's public IP and P2P port
+[base_node.p2p]
+public_address = "/ip4/203.0.113.42/tcp/18141"
+```
+</CodeGroup>
+
+### P2P port
+
+The default P2P listening port is **18141**. You can change it:
+
+```toml
+[base_node.p2p]
+# Default: 18141
+listener_address = "/ip4/0.0.0.0/tcp/18141"
+```
+
+---
+
+## Firewall configuration
+
+Open the following ports depending on your deployment:
+
+| Port | Protocol | Direction | Purpose |
+|---|---|---|---|
+| 18141 | TCP | Inbound + Outbound | P2P peer connections (only if using TCP transport, not Tor) |
+| 18142 | TCP | Localhost only | Base node gRPC — do **not** expose publicly |
+| 18143 | TCP | Localhost only | Console wallet gRPC — do **not** expose publicly |
+
+<Note>
+  If you are using Tor transport (the default), you do **not** need to open port 18141 in your firewall. Tor handles NAT traversal automatically.
+</Note>
+
+---
+
+## Custom base node peer (for wallets)
+
+When running a wallet alongside your own base node, configure the wallet to connect directly to your node instead of discovering peers automatically. This is strongly recommended for exchange deployments.
+
+```toml
+[wallet]
+# Format: "<public_key>::<multiaddr>"
+# Example using TCP:
+custom_base_node = "90f67a04edcb36261e6304ca213629d183c44e26bd47e38c253473f44d901733::/ip4/127.0.0.1/tcp/18141"
+
+# Example using Tor:
+# custom_base_node = "90f67a04edcb36261e6304ca213629d183c44e26bd47e38c253473f44d901733::/onion3/f5qbkkfkoxowzvshe5mppzpgiiy76cwumpsacungeldoal6hehcgzfqd:18141"
+```
+
+You can find your node's public key and address by running `whoami` in the base node console. You can also override `custom_base_node` at runtime without editing the config file:
+
+```bash
+minotari_console_wallet -p "wallet.custom_base_node=<pubkey>::<address>"
+```
+
+Or via environment variable:
+
+```bash
+export TARI_WALLET__CUSTOM_BASE_NODE="<pubkey>::<address>"
+minotari_console_wallet
+```
+
+---
+
+## gRPC authentication
+
+For an extra layer of protection — especially if you use a reverse proxy that exposes gRPC to internal services — enable HTTP Basic Auth on the gRPC interface:
+
+<CodeGroup>
+```toml Base node authentication
+[base_node]
+grpc_authentication = { username = "nodeadmin", password = "str0ng-p@ssword" }
+```
+
+```toml Wallet authentication
+[wallet]
+grpc_authentication = { username = "walletadmin", password = "str0ng-p@ssword" }
+```
+</CodeGroup>
+
+<Warning>
+  Even with authentication enabled, the gRPC channel itself is unencrypted. Do not expose gRPC to a network interface without an additional encryption layer (TLS terminating proxy or SSH tunnel).
+</Warning>
+
+---
+
+## High-availability: running multiple nodes
+
+For exchange deployments where availability is critical, run two or more base nodes and configure your wallet(s) to fall back between them. Each node maintains an independent copy of the blockchain. If one goes down, the wallet reconnects to the next peer in its list.
+
+You can set multiple fallback peers in the wallet config:
+
+```toml
+[wallet]
+# Primary node
+custom_base_node = "<primary_pubkey>::<primary_address>"
+
+# Additional peers the wallet will try if the primary is unavailable
+[wallet.p2p.seeds]
+peer_seeds = [
+  "<backup1_pubkey>::<backup1_address>",
+  "<backup2_pubkey>::<backup2_address>",
+]
+```
+
+<Note>
+  Each backup node must be fully synced and have its gRPC interface accessible from the wallet server. Run `watch status` on each node to confirm it is at the current chain tip before routing traffic to it.
+</Note>

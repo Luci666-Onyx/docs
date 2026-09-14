@@ -1,0 +1,65 @@
+---
+title: "What is Tari? Privacy-First Blockchain Protocol"
+sidebarTitle: "Introduction"
+description: "Tari is an open-source, proof-of-work blockchain with a two-layer architecture: Minotari for mining XTM and the Ootle for smart contracts."
+---
+
+Tari is an open-source, proof-of-work blockchain protocol built around a simple idea: digital assets should be private by default, accessible to everyone, and free from centralised control. Rather than bolting privacy on as an afterthought, Tari's entire base layer is designed around confidentiality from the ground up. Whether you are mining, sending value, or building smart contracts, Tari gives you a system where privacy is the default — not an optional add-on.
+
+## Two Layers, One Protocol
+
+Tari is made up of two complementary layers that work together to support both everyday value transfer and programmable smart contracts.
+
+### Layer 1 — Minotari
+
+The foundation of Tari is **Minotari**, a proof-of-work blockchain that uses the [Mimblewimble](https://en.wikipedia.org/wiki/MimbleWimble) protocol to keep transactions confidential by default. Minotari issues the **XTM token**, which is the native currency of the base layer. You mine XTM, send XTM, and use XTM as the economic anchor for everything built on top.
+
+Minotari supports four distinct mining algorithms, which means it is accessible to a broad range of hardware — from CPUs and GPUs to merge-miners already securing the Monero network. Each algorithm receives an equal share of block rewards, keeping the mining ecosystem balanced and decentralised.
+
+### Layer 2 — The Ootle
+
+Built on top of Minotari is **the Ootle**, Tari's Layer 2 smart contract network. The Ootle is powered by the **TARI token**, which can only be created by burning XTM on Layer 1 at a 1:1 ratio. This mechanism — known as the **Turbine Model** — ties the two layers together economically and ensures TARI always has provable backing in the base layer.
+
+The Ootle is where you deploy and interact with smart contracts, decentralised applications, and other programmable logic on the Tari network.
+
+## What Makes Tari Different
+
+Tari introduces several design choices that set it apart from other blockchain protocols.
+
+**Privacy by default.** Tari's base layer is built on Mimblewimble, which means transaction amounts and addresses are confidential without any extra steps on your part.
+
+**Emoji IDs.** Instead of long hexadecimal wallet addresses, Tari represents your public key as a human-readable sequence of emoji — your **Emoji ID**. This makes addresses easier to verify visually and harder to accidentally mistype.
+
+**One-sided transactions.** You can send XTM to someone using only their Emoji ID, even if the recipient is completely offline. This is a significant departure from vanilla Mimblewimble, which traditionally requires both parties to be online simultaneously to construct a transaction.
+
+**Four mining algorithms.** Minotari supports RandomX merge-mined with Monero (RxM), Tari-native RandomX (RxT), SHA3x, and Cuckaroo (C29). Each algorithm earns 25% of block rewards, encouraging diverse participation and hardware access.
+
+**Open-source and permissionless.** Tari is fully open-source. Anyone can run a node, mine, build on the Ootle, or contribute to the protocol itself.
+
+## Products in the Tari Ecosystem
+
+Tari ships a suite of software tools so you can participate in the network without needing deep technical expertise.
+
+| Product | What it does |
+|---|---|
+| **Tari Universe** | A desktop mining application that makes participating in Minotari mining as simple as downloading an app |
+| **Minotari Console Wallet** | A command-line wallet for sending, receiving, and managing your XTM |
+| **Minotari Base Node** | The software that connects you to the Minotari peer-to-peer network and validates the blockchain |
+| **The Ootle** | Tari's Layer 2 smart contract network where you can deploy and interact with decentralised applications |
+
+## Where to Go Next
+
+<CardGroup cols={2}>
+  <Card title="Tari Universe" icon="stars" href="/universe/overview">
+    Download the desktop mining app and start earning XTM rewards with a single click.
+  </Card>
+  <Card title="Running a Node" icon="server" href="/node/overview">
+    Set up a Minotari Base Node to contribute to network security and decentralisation.
+  </Card>
+  <Card title="Exchange Integration" icon="arrow-right-arrow-left" href="/exchange/overview">
+    Integrate XTM deposits, withdrawals, and wallet management into your platform.
+  </Card>
+  <Card title="Build on Ootle" icon="code" href="/ootle/overview">
+    Deploy smart contracts and decentralised applications on Tari's Layer 2 network.
+  </Card>
+</CardGroup>

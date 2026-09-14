@@ -1,0 +1,102 @@
+---
+title: "Mining XTM with Tari Universe: Setup and Earning"
+sidebarTitle: "Mining"
+description: "Configure Tari Universe to mine XTM on your CPU or GPU. Learn system requirements, mining lanes, and how block rewards are calculated."
+---
+
+Tari Universe makes mining XTM as simple as downloading an app and pressing a button. Under the hood, your computer is performing real cryptographic work that secures the Tari blockchain — and you are rewarded with XTM for every contribution your machine makes. This page explains the system requirements, the mining algorithms involved, how block rewards are distributed, and how you can increase your earnings over time.
+
+<Note>
+  Tari Universe handles all mining configuration automatically. You do not need to use the command line, edit any configuration files, or understand mining algorithms to get started. Everything is managed for you inside the app.
+</Note>
+
+## System Requirements
+
+Before installing Tari Universe, make sure your computer meets the following requirements:
+
+| Component | Minimum | Recommended |
+|---|---|---|
+| **Operating System** | macOS 10.15+, Windows 10+, Ubuntu 20.04+ | Latest stable release of your OS |
+| **RAM** | 4 GB | 8 GB or more |
+| **Storage** | 1 GB free (SSD preferred) | SSD with 5 GB+ free for blockchain sync |
+| **CPU** | 64-bit multi-core processor | Modern quad-core or better |
+| **GPU** | Optional | Dedicated GPU for SHA3x mining |
+| **Internet** | Stable broadband connection | — |
+
+A solid-state drive (SSD) is strongly preferred over a spinning hard disk. The Tari node embedded in Tari Universe performs frequent small reads and writes during sync, and an HDD will significantly slow down the initial setup.
+
+## Mining Algorithms
+
+Tari supports multiple proof-of-work algorithms, and Tari Universe can take advantage of all of them:
+
+- **RandomX** — A CPU-friendly algorithm originally designed for Monero. It is intentionally resistant to ASIC mining hardware, which means ordinary desktop and laptop CPUs are competitive. Tari Universe uses RandomX mining by default on machines without a dedicated GPU.
+- **SHA3x** — A GPU-accelerated variant of SHA-3 that allows machines with dedicated graphics cards to contribute additional hash power. If your machine has a discrete GPU, Tari Universe will automatically activate SHA3x alongside RandomX.
+- **Merge-mining with Monero** — Tari supports merge-mining with the Monero network via the RandomX algorithm. This means Monero miners can simultaneously mine Tari at no additional computational cost, further securing the Tari network.
+
+Tari Universe detects your hardware and selects the appropriate combination of algorithms automatically. You do not need to choose or configure anything.
+
+## Block Rewards and Mining Lanes
+
+The Tari network produces a new block approximately every minute. Each block carries an XTM reward that is shared among miners who contributed proof-of-work during that block period.
+
+Tari's reward structure is split across **four mining lanes**:
+
+1. **RandomX lane** — rewards CPU miners contributing via the RandomX algorithm
+2. **SHA3x lane** — rewards GPU miners contributing via the SHA3x algorithm
+3. **Merge-mining lane** — rewards Monero merge-miners participating via RandomX
+4. **Tari-specific lane** — reserved for native Tari network operations
+
+Because Tari Universe uses pool mining by default, your individual contributions are pooled with other miners and rewards are distributed proportionally to your share of the pool's total hash power. This means even modest hardware earns a steady stream of small rewards rather than waiting to win an entire block on its own.
+
+### Pool Mining vs Solo Mining
+
+Tari Universe uses **pool mining** by default. In pool mining, your computer contributes hash power to a shared pool alongside thousands of other miners. When the pool solves a block, the reward is divided among all participants in proportion to their contributed work. This provides a much more predictable and consistent income compared to solo mining, where you would need to solve an entire block on your own to earn anything.
+
+## The Network Warm-Up Period
+
+When the Tari mainnet first launched, the network entered a **warm-up period** — an early phase during which mining difficulty is still adjusting to the growing number of participants. During this phase, some miners may observe lower-than-expected rewards as the difficulty algorithm calibrates itself. This is normal and expected. As the network matures and difficulty stabilises, rewards become more predictable. The warm-up period is temporary; it is not a bug or a problem with your setup.
+
+## Will Mining Slow Down My Computer?
+
+Tari Universe is designed to be a good citizen on your machine. It uses spare computational resources — the CPU and GPU cycles that would otherwise be idle — to perform mining. In practice, this means:
+
+- If you are actively gaming, rendering video, or running other intensive tasks, you may notice some competition for resources. You can **pause mining at any time** with a single click in the app.
+- On most modern machines, light everyday tasks like browsing, email, and document editing are not noticeably affected while mining runs in the background.
+- Tari Universe does not modify your system beyond its own installation directory, and it does not run at startup unless you explicitly configure it to do so.
+
+<Tip>
+  If you notice Tari Universe affecting your experience during intensive tasks, use the in-app pause toggle. Your wallet and settings are preserved when you resume.
+</Tip>
+
+## Maximising Your Earnings
+
+### Invite Friends with Your Referral Link
+
+Tari Universe includes a **Tari Airdrop game** that rewards you for growing the network. When you invite friends to mine using your personal referral link, you earn **gems** for each friend who joins and starts mining. Gems can be exchanged for additional XTM rewards and other in-app bonuses.
+
+### Earn Hammers
+
+**Hammers** are a special in-game resource earned through ongoing participation in the Tari Airdrop game. They amplify your gem earnings and can be collected through daily activity, referrals, and special community events. Keep Tari Universe running consistently to accumulate hammers over time.
+
+### Use Better Hardware
+
+Because Tari supports both CPU (RandomX) and GPU (SHA3x) mining, adding a dedicated graphics card to your mining machine meaningfully increases your hash rate and your share of the pool reward. Higher hash rate = a larger slice of each block reward.
+
+## Explore Further
+
+<CardGroup cols={2}>
+  <Card
+    title="Wallet"
+    icon="wallet"
+    href="/universe/wallet"
+  >
+    Learn how to send, receive, and back up your XTM wallet inside Tari Universe.
+  </Card>
+  <Card
+    title="FAQ"
+    icon="circle-question"
+    href="/universe/faq"
+  >
+    Common questions about mining, rewards, safety, and getting started.
+  </Card>
+</CardGroup>

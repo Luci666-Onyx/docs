@@ -1,0 +1,91 @@
+---
+title: "Exchange Integration Architecture for Minotari"
+sidebarTitle: "Architecture"
+description: "The Minotari exchange integration uses a base node for blockchain data, a read-only wallet for deposits, and a cold storage wallet for withdrawals."
+---
+
+Before writing a single line of integration code, it is worth understanding how the four components of a Minotari exchange integration fit together. Each component has a distinct role and security boundary. Getting the architecture right from the start prevents the class of mistakes — exposed gRPC ports, shared wallets, online cold storage — that have caused losses on other exchanges.
+
+## Integration Components
+
+### 1. Minotari Base Node
+
+The base node (`minotari_node`) is a full Tari blockchain node. It syncs the entire chain, validates blocks and transactions, maintains a peer-to-peer connection to the network, and exposes chain data over gRPC on port `18142`.
+
+Your exchange application queries the base node to check sync status, retrieve block and transaction data, and search for Payment References (PayRefs) associated with deposits. The node does **not** hold any funds or private keys — it is purely an information source.
+
+**Port reference:**
+- `18141/tcp` — Peer-to-peer (P2P) network traffic
+- `18142/tcp` — gRPC API (must be localhost-only)
+
+### 2. Read-Only (Monitoring) Wallet
+
+The monitoring wallet (`minotari_console_wallet` configured with a view key only) watches for transactions arriving at your exchange's deposit addresses. It can see incoming funds and decode Payment IDs, but it holds **no spending key** — it cannot authorize or broadcast outgoing transactions.
+
+This wallet runs on your internet-connected exchange infrastructure and is the primary interface your deposit monitoring service calls. Its gRPC endpoint is `18143`.
+
+**Port reference:**
+- `18143/tcp` — gRPC API (must be localhost-only)
+
+### 3. Cold Storage Wallet
+
+The cold storage wallet holds the full spend keys for your exchange's funds. It should live on an **air-gapped machine or dedicated secure hardware** that is only brought online when a withdrawal batch needs to be processed.
+
+For day-to-day operations, your hot system can use a **watch-only wallet** (public keys only, no spend key) to monitor balances. When a withdrawal is approved, the transaction is constructed and signed by the cold wallet, then broadcast to the network.
+
+<Warning>
+  The cold wallet's seed phrase (24 words) must be written down on paper and/or engraved on metal backup. **Never store it digitally.** Anyone with the seed phrase has full, unconditional control over all funds held by that wallet.
+</Warning>
+
+### 4. Your Exchange Application
+
+Your backend application connects to the monitoring wallet and base node over their respective gRPC interfaces. It is responsible for:
+
+- Generating per-user deposit addresses with embedded Payment IDs
+- Polling or streaming completed transactions from the monitoring wallet
+- Matching incoming transactions to user accounts via Payment ID
+- Submitting validated withdrawal requests to the cold storage wallet
+- Monitoring withdrawal transaction confirmations
+
+## Deposit Data Flow
+
+The following steps describe how a deposit moves from a user's wallet to a credited exchange account:
+
+1. **User requests a deposit address** via your exchange UI.
+2. **Your exchange calls `GetPaymentIdAddress`** on the monitoring wallet gRPC, passing a unique payment identifier for that user and session. The wallet returns a one-sided address with the Payment ID embedded.
+3. **You store the Payment ID** in your database, associated with the user's account.
+4. **User sends XTM** from their wallet to the returned one-sided address, including the Payment ID in the transaction.
+5. **The monitoring wallet detects the incoming transaction** during its regular blockchain scan. The transaction becomes visible via `GetCompletedTransactions` with the matching Payment ID.
+6. **Your monitoring service reads the transaction**, matches the Payment ID to the user record, validates the amount, and **credits the user's account** in an atomic database operation.
+7. **Confirmation is tracked** — a minimum of 6 block confirmations is recommended before treating a deposit as final.
+
+## Withdrawal Data Flow
+
+1. **User submits a withdrawal request** with a destination Tari address and amount.
+2. **Your exchange validates the request** — KYC status, sufficient balance, valid one-sided address, rate limits, daily limits, blacklist check.
+3. **The withdrawal is queued** with status `pending_approval`. Large amounts trigger a manual approval step.
+4. **An authorized operator approves the withdrawal** (or the automated system approves it if it falls below the manual threshold).
+5. **The cold storage wallet is brought online** (if air-gapped) or accessed via secure channel.
+6. **`Transfer` is called** on the cold wallet gRPC with the destination address, amount, and withdrawal ID as Payment ID.
+7. **The transaction is broadcast** to the Tari network. Your system records the `transaction_id` and `excess_sig`.
+8. **Your monitoring service tracks the transaction** until it reaches the required confirmation depth, then marks the withdrawal as complete and notifies the user.
+
+## Security Principle: localhost-Only gRPC
+
+<Warning>
+  The gRPC ports for both the base node (`18142`) and wallet (`18143`) must **only** bind to `127.0.0.1`. They must never be exposed to the public internet or to untrusted internal networks. All access from your exchange application must go through the local loopback interface.
+</Warning>
+
+If your exchange application and the Tari processes run on different machines, tunnel the gRPC traffic over an encrypted, authenticated channel (e.g., a mutual-TLS sidecar, a WireGuard tunnel, or an SSH port forward). Never open these ports to the network directly.
+
+## High Availability
+
+<Note>
+  For production exchanges, run **multiple base nodes** — ideally in different availability zones or datacenters. Your monitoring wallet should be configured with at least two trusted base node peers so that it can continue scanning even if one node goes offline. Node redundancy is a prerequisite for exchange-grade uptime.
+</Note>
+
+A recommended minimum production topology is:
+- 2–3 base nodes (one primary, one or two hot standbys)
+- 1 monitoring wallet connected to the primary base node, with failover peers configured
+- 1 cold wallet process on isolated hardware, brought online only for withdrawal batches
+- Health checks on all gRPC endpoints with automatic alerting

@@ -1,0 +1,91 @@
+---
+title: "Integrating Minotari (XTM) into Your Exchange"
+sidebarTitle: "Overview"
+description: "Everything you need to list Minotari (XTM) on your exchange: node setup, wallet management, deposit monitoring, and withdrawal processing."
+---
+
+Minotari (XTM) is the base layer cryptocurrency of the Tari protocol. This guide walks exchange operators and integration engineers through every step required to safely list XTM — from spinning up a Minotari base node and configuring monitoring wallets, to tracking deposits with Privacy-preserving Payment IDs and processing withdrawals from cold storage. All exchange integration is done through a gRPC API exposed by the Tari binaries, so you can use any gRPC-capable language in your stack.
+
+## What This Guide Covers
+
+The integration involves four main areas:
+
+- **Running a Minotari base node** that syncs with the Tari network and serves blockchain data to your application over gRPC
+- **Setting up a read-only monitoring wallet** that watches for incoming deposits without holding any spending capability
+- **Tracking deposits with Payment IDs** — unique identifiers embedded in one-sided addresses that let your exchange attribute incoming XTM to individual users without compromising privacy
+- **Processing withdrawals from a cold storage wallet** that should live on air-gapped or secure hardware and never be exposed to the internet
+
+## Who This Is For
+
+This guide is written for **exchange operators** and **integration engineers** who are responsible for listing XTM and building the supporting infrastructure. Familiarity with running server processes, configuring firewalls, and working with gRPC APIs is assumed. No deep knowledge of Tari or Mimblewimble cryptography is required to follow the practical steps.
+
+## Technology Stack
+
+The Minotari software suite ships as compiled Rust binaries. Two binaries are used in the exchange integration:
+
+| Binary | Role | Default gRPC Port |
+|---|---|---|
+| `minotari_node` | Syncs blockchain, provides chain data | `18142` |
+| `minotari_console_wallet` | Manages keys, monitors or sends transactions | `18143` |
+
+Both expose a **gRPC API** defined by `.proto` files in the [Tari GitHub repository](https://github.com/tari-project/tari). You can generate client stubs in any language that supports Protocol Buffers. The peer-to-peer port for the base node is `18141`.
+
+### Supported Languages
+
+<CardGroup cols={2}>
+  <Card title="Node.js" icon="node-js">
+    Use `@grpc/grpc-js` and `@grpc/proto-loader` for runtime proto loading. No compile step required.
+  </Card>
+  <Card title="Python" icon="python">
+    Generate stubs with `grpcio-tools` from the `.proto` files, then call methods directly.
+  </Card>
+  <Card title="Rust" icon="rust">
+    Use `tonic` with `prost` to compile `.proto` definitions into idiomatic async Rust clients.
+  </Card>
+  <Card title="PHP" icon="php">
+    Use the `grpc` PECL extension with `protoc`-generated stubs, or call via `grpcurl` for scripted workflows.
+  </Card>
+</CardGroup>
+
+For quick testing and validation at the command line, [grpcurl](https://github.com/fullstorydev/grpcurl) works against any plaintext gRPC endpoint without requiring code generation.
+
+## Networks
+
+Tari runs on three networks, each identified by a unique Emoji ID prefix:
+
+| Network | Emoji | Use |
+|---|---|---|
+| Mainnet | 🐢 | Production — real XTM with real value |
+| Testnet | 📟 | Staging — free test coins, resets periodically |
+| Nextnet | 🌈 | Bleeding-edge preview of upcoming features |
+
+<Note>
+  Always test your full integration on **Testnet** before pointing your infrastructure at Mainnet. Testnet coins have no monetary value, so you can exercise deposits, withdrawals, and edge-case error paths without risk.
+</Note>
+
+## Quick-Start Recommendation
+
+Start on Testnet, validate every flow end-to-end, then update your node and wallet configurations to target Mainnet. The binary commands and gRPC methods are identical across networks — only the network identifier in the config file changes.
+
+## Guide Pages
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="sitemap" href="/exchange/architecture">
+    Understand the four-component integration model and how data flows between your base node, wallets, and exchange application.
+  </Card>
+  <Card title="Node Setup" icon="server" href="/exchange/node-setup">
+    Download and run the Minotari base node, configure gRPC, and verify your node is syncing correctly.
+  </Card>
+  <Card title="Wallet Setup" icon="wallet" href="/exchange/wallet-setup">
+    Create a read-only monitoring wallet for deposits and a cold storage wallet for withdrawals.
+  </Card>
+  <Card title="Deposit Monitoring" icon="arrow-down-to-line" href="/exchange/deposits">
+    Generate per-user Payment ID addresses, listen for incoming transactions, and credit user accounts.
+  </Card>
+  <Card title="Withdrawal Processing" icon="arrow-up-from-line" href="/exchange/withdrawals">
+    Validate withdrawal requests, execute one-sided transactions from cold storage, and monitor confirmations.
+  </Card>
+  <Card title="API Reference" icon="code" href="/exchange/api/wallet-grpc">
+    Full reference for all gRPC wallet and base node methods used in the exchange integration.
+  </Card>
+</CardGroup>

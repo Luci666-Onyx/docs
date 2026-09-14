@@ -1,0 +1,139 @@
+# Source: https://tari.com/tokenomics
+
+About TariBuildCommunity
+
+active miners
+
+[Download](https://tari.com/downloads)
+
+About TariBuildCommunity
+
+active miners
+
+[Download](https://tari.com/downloads)
+
+active miners
+
+# Tari Tokenomics
+
+## Everything you ever wanted to know about Tari tokenomics
+
+![](https://tari.com/_next/static/media/1.3zqyg-3dtwosa.jpg)
+
+**"Wen Token?"**
+
+It is a rallying cry as poignant as it is timeless. Of course, the inquisitors can expect a blunt and enthusiastic "soon!" in response. But this isn't an article about "Wen;" it is an article about How. The time has come to reveal the details of Tari tokenomics. 
+
+**The Big Picture:**
+
+Let's get down to brass tacks. The Tari network has two layers: layer 1 (aka the Minotari network) and layer 2 (aka the Ootle network). Layer 1 is secured by proof of work. Miners are rewarded with Minotari tokens (XTM). Layer 2 is a Byzantine fault-tolerant network fueled by the Tari token (TARI).
+
+There will be a total supply of 21 billion XTM emitted gradually using an exponential decay function over approximately 27.8 years. Once annual emissions decline to 1% of total supply, a perpetual 1% tail emission will continue indefinitely, ensuring ongoing miner compensation and network security. Of this total supply, 6.3 billion XTM (30%) will be pre-mined, subject to significant lockups and vesting schedules. These pre-mined tokens will support protocol infrastructure, community incentives, grants, and long-term alignment with contributors. After the pre-mine distribution, all newly emitted tokens (100%) will go exclusively to miners who secure the Tari network.
+
+There is a deep relationship between XTM tokens and TARI tokens. The only way to create TARI is to burn XTM 1:1. A transaction fee-oriented burn mechanism on the Ootle network will help ensure overall token supply equilibrium. There is much to cover, so let's start with the Tari Layer 1 proof of work model and XTM. 
+
+**Proof of Work Distribution** 
+
+Once considered the gold standard for securing blockchains, proof of work originated with Satoshi Nakamoto’s implementation for Bitcoin. Recently, it’s fallen out of favor for proof of stake consensus mechanisms. We strongly believe that in the coming months, there will be a renewed appreciation for Nakamoto consensus: A blockchain consensus mechanism combining proof of work and the longest chain rule to achieve network agreement on the blockchain state. Anyone and everyone will be able to mine Minotari on Day 1 - creating a world where everyone has a voice and an opportunity to participate in the network and shape its future. This accessibility brings a fair distribution that’s been absent in recent projects. You don’t need to be an early investor or an airdrop farmer to get XTM; simply contributing raw hash power to the network is enough. 
+
+Tari miners receive XTM for every block they mine, with block rewards declining on a block-by-block basis. In the first 12 years post-mainnet launch, the Tari emission curve dictates the mining reward. After 12 years, the protocol rewards miners via a tail emission to ensure they receive compensation forever for securing the network. The tail emission increases the XTM emitted by **1%** a year. Tari miners receive **100%** of block rewards and Layer 1 transaction fees.
+
+![](https://tari.com/_next/static/media/2.0wp_zrvgvimad.png)
+
+Unlike Bitcoin, which operates on a 4-year halving schedule, the Tari block rewards decrease steadily over time block-by-block through an exponential decay function, halving approximately every three years.
+
+Network rewards are split evenly across Tari's four proof of work lanes: RandomX merge-mined with Monero (RxM), Tari-native RandomX (RxT), SHA3x, and Cuckaroo (C29). Each lane targets **25%** of the block rewards, and the Tari protocol bakes this equal distribution into the consensus rules. RandomX is a proof of work (PoW) algorithm designed to be ASIC-resistant by optimizing for general-purpose CPUs, ensuring fairer, more accessible, and more decentralized mining. The merge-mining aspect of Tari enables existing RandomX miners to increase their revenue and keep them successfully mining both the Monero chain and Tari for the foreseeable future.
+
+**Burn Baby Burn: The Turbine Model**
+
+All dapp (tapp!) activity will occur on the Tari Layer 2 (aka the Ootle), including DeFi, NFTs, SocialFi, GameFi, stablecoins, streaming payments, and more. Tari contributors have designed an elegant relationship between the Layer 1 tokens (XTM) and the Layer 2 tokens (TARI) to offset supply inflation and maintain a soft peg between them. Tari contributors achieve the interplay between the two tokens through a token model called the [Turbine Model](https://rfc.tari.com/RFC-0320_TurbineModel.html).
+
+In the Tari Turbine Model, the only way to create TARI tokens is to burn XTM tokens on the Layer 1 and redeem the TARI 1:1 on the Ootle network. As a result, there is a one-way relationship between the two tokens. On the Ootle, a portion of the transaction fee is paid to validators, and a portion of the transaction fee is burned. This token-burning mechanism creates a powerful economic model where Tari miners can confidently secure the network forever, and at scale, the overall Tari token economy achieves circulating supply equilibrium. 
+
+![](https://tari.com/_next/static/media/3.3p4nli6z7t6vf.png)
+
+The Turbine Model enables Tari to maintain a soft 1:1 peg between Minotari (XTM) and Tari (TARI) without using complicated peg-out mechanisms like drive chains or federated pegs. 
+
+![](https://tari.com/_next/static/media/4.3h4mbm20_6wq-.png)
+
+Other things being equal, greater activity on the Ootle depletes the supply of Tari tokens faster. Mining rewards on the Minotari network in the form of XTM replenishes the supply of TARI.
+
+The Throttle actively controls the burn rate for TARI associated with every transaction on the Ootle. The Throttle is an algorithm run via consensus by validator nodes that periodically adjusts the burn rate to maintain the stability of the Tari ecosystem. The Throttle has three priorities in decreasing order of importance: to i) maintain the XTM:TARI peg, ii) maintain a stable supply of TARI + XTM, and iii) maintain a total token supply of 21 billion tokens.
+
+Tari’s fast finality, sub-penny transaction fees, infinite scalability, programmable confidentiality features, and superior user experience make it the best platform to become the default value layer of the internet.
+
+Slowly and then all at once 🐢
+
+**Token Distribution**
+
+With **70%** of the initial emission of XTM tokens going to miners, what’s the deal with the **30%** of pre-mined XTM tokens?
+
+The other **30%** pre-mine is broken into four categories:
+
+- Community
+- Protocol Infrastructure and Grants
+- Contributors
+- Participants
+
+Let’s talk about each in detail.
+
+![](https://tari.com/_next/static/media/5.2d6bgzh4gbtzm.png)
+
+**Community**
+
+A wise anon once said, “No token, no community.” There's no industry in the world like crypto, and we wouldn't be here without continuous support from the Tari community. Our community is our constellation, guiding us and the sole reason we exist!
+
+**5%** of the XTM supply has been set aside for incentive programs to encourage and reward people for their engagement within the Tari community. When combined with the miner portion, **75%** of the total initial supply is for the Tari community. On a go-forward basis, **100%** of XTM tail emissions will be paid exclusively to the Tari community of miners working hard to secure the network.
+
+**Protocol Infrastructure and Grants**
+
+Tari is a one-of-a-kind protocol design and network that presents unique challenges. We have set aside **9%** of the initial XTM supply to meet these challenges and support the development of tooling necessary for operating the Tari network. After all, we’re not just building a network together; we’re crafting a world where every Tari matters. 
+
+**Contributors**
+
+For over six years, contributors have developed meaningful innovations and made substantial efforts to build the Tari protocol from the ground up. **4%** of the initial XTM supply is being set aside to reward people for their contributions to the development of the Tari network.
+
+**Participants**
+
+Who are the participants? 
+
+Before Tari was a protocol, it was a vision. Participants are the early supporters such as Blockchain Capital, Collab+Currency, gmoney, loomdart, DCF GOD, DV Chain, Kamal Ravikant, Bryan Pellegrino, Ayon, Messi, Pantera, Hack VC, Paris Hilton, eGirl Capital, Kilowatt, Redpoint, Trinity, and many others who stepped up to help make Tari a reality. **12%** of the supply has been reserved for those who have supported the development of Tari from the very beginning. The Tari community is forever grateful for your continuous and unwavering support.
+
+At this point, you’re probably wondering when all these tokens unlock. Let me key you in.
+
+**Unlock Schedule**
+
+![](https://tari.com/_next/static/media/6.1e1dmlvxaqets.png)
+
+_\***40%** of the Protocol Infrastructure and Grants allocation will be reserved and available upfront for protocol liquidity._
+
+**Community Tokens**
+
+These tokens will unlock every month for 12 months beginning six months after the mainnet launch.
+
+**Protocol Infrastructure and Grants Tokens**
+
+At the mainnet launch, 756,000,000 tokens will be available for liquidity providers. The balance will be unlocked every month for four years, starting six months after the launch.
+
+**Contributor Tokens**
+
+These tokens will unlock every month for five years, beginning 12 months after the mainnet launch.
+
+**Participant Tokens**
+
+These tokens will unlock every month for two years, beginning 12 months after the mainnet launch.
+
+![](https://tari.com/_next/static/media/7.207czf3umhukr.png)
+
+Please note that just because these tokens are unlocked does not necessarily mean they will be circulating. For example, tokens allocated for Protocol Infrastructure and Grants will be unlocked but held back from circulating supply until they can be deployed to improve the usefulness of the Tari network.
+
+**What's next?**
+
+Tari mainnet is here! 🎉 You can now mine Tari with Tari Universe—the easiest, most beautiful mining app ever created. Simply download it for Mac, PC, or Linux, install it, and start mining immediately. 
+You can also earn precious gems and maximize your rewards through the [Tari Airdrop](https://airdrop.tari.com/) game by inviting friends to mine. Questions or just want to chat? Join our [Telegram community](https://t.me/tariproject)—we’d love to talk Tari, mining tips, or even your favorite movies.
+
+**Thank you**
+
+We want to thank loomdart, A.B., Avichal Garg, Lozenge, Spencer Bogart, RandomTask, Fran Strajnar, Mike Darlington, Yat Museum, Micah Spruill, Tyler Frost, Sultan of Yat, Jedi Blocmates, Ivan Brightly, Preston Byrne, Russ Franklin, Max Power, Moses and the Mozaik team, Stephen McKeon, Wes McKinney, and many others for reviewing and providing feedback to drafts of this document. You are Tari. We are Tari 🐢
+
+**NOTICE TO RESIDENTS OF THE UNITED STATES: TARI HAS NOT BEEN REGISTERED UNDER THE SECURITIES ACT OF 1933, AS AMENDED, AND MAY NOT BE OFFERED OR SOLD IN THE U.S. OR TO U.S. PERSONS (AS SUCH TERM IS DEFINED IN RULE 902 AS PROMULGATED BY THE U.S. SECURITIES AND EXCHANGE COMMISSION) UNLESS IT IS REGISTERED UNDER SUCH ACT, OR AN EXEMPTION FROM THE REGISTRATION REQUIREMENTS OF SUCH ACT IS AVAILABLE.**

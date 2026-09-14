@@ -1,0 +1,260 @@
+---
+title: "Install and Run a Minotari Base Node"
+sidebarTitle: "Installation"
+description: "Download pre-built Minotari binaries or build from source. Covers Linux, macOS, and Windows installation with step-by-step instructions."
+---
+
+You can get a Minotari base node running in minutes by downloading a pre-built binary from [tari.com/downloads](https://tari.com/downloads). If you need to verify every byte of code that runs on your machine, you can also build from source using Rust — the steps for both paths are covered below.
+
+## Option 1: Download pre-built binaries
+
+Downloading binaries is the fastest way to get started. Tari publishes signed packages for Linux, macOS, and Windows with every release.
+
+<Steps>
+  <Step title="Download the installer">
+    Go to [tari.com/downloads](https://tari.com/downloads) and choose your platform and network (Mainnet, Testnet, or Nextnet). Download the installer or archive for your operating system.
+
+    You can also browse all releases — including older versions — on the [GitHub releases page](https://github.com/tari-project/tari/releases).
+  </Step>
+
+  <Step title="Verify the SHA256 hash">
+    Tari publishes a SHA256 hash alongside every download. Verify your file before running it.
+
+    <Tabs>
+      <Tab title="Linux / macOS">
+        ```bash
+        shasum -a256 <PATH_TO_BINARY_INSTALL_FILE>
+        ```
+        Compare the output to the hash published on the downloads page. If they do not match, do not run the binary.
+      </Tab>
+      <Tab title="Windows">
+        ```powershell
+        certUtil -hashfile <PATH_TO_BINARY_INSTALL_FILE> SHA256
+        ```
+        Compare the output to the hash published on the downloads page. If they do not match, do not run the binary.
+      </Tab>
+    </Tabs>
+
+    <Note>
+      Hash verification confirms your file downloaded without corruption or tampering in transit. If you need absolute certainty that the binary matches the source code, build from source instead.
+    </Note>
+  </Step>
+
+  <Step title="Run the installer">
+    Execute the installer or extract the archive to a convenient location. The installer creates shortcuts for all included applications.
+  </Step>
+
+  <Step title="Start Tor (Windows only)">
+    <Tabs>
+      <Tab title="Windows">
+        On Windows, the base node requires a separate Tor daemon. Before starting the node, launch Tor using the provided shortcut:
+
+        ```
+        start_tor
+        ```
+
+        Wait until the Tor console prints the following line before proceeding:
+
+        ```
+        [notice] Bootstrapped 100% (done): Done
+        ```
+      </Tab>
+      <Tab title="Linux / macOS">
+        On Linux and macOS, Tor is embedded directly in the Tari binaries via the `libtor` feature. You do **not** need to install or start a separate Tor process.
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Start the node">
+    Launch the base node using the provided shortcut or by running the binary directly:
+
+    ```bash
+    minotari_node
+    ```
+
+    Continue to the [First run](#first-run) section below for what to expect next.
+  </Step>
+</Steps>
+
+### Mining shortcuts
+
+The installer also creates the following shortcuts for mining:
+
+| Shortcut | Purpose |
+|---|---|
+| `start_minotari_miner` | Launches the standalone SHA-3 miner. |
+| `start_minotari_merge_mining_proxy` | Starts the Monero merge-mining proxy. |
+| `start_xmrig` | Starts XMRig for merge mining alongside `start_minotari_merge_mining_proxy`. |
+
+---
+
+## Option 2: Build from source
+
+Building from source lets you audit every line of code and compile for a specific network target. It takes longer than downloading a binary but is recommended for production exchange deployments.
+
+### Requirements
+
+- **Rust 1.93.0 or newer** — the workspace pins the `stable` channel via `rust-toolchain.toml`, so `rustup` selects the right toolchain automatically.
+- **`protoc`** (protobuf compiler) — distro-packaged versions are often too old. The install scripts below install a compatible version.
+
+### Install system dependencies
+
+<Tabs>
+  <Tab title="Linux (Ubuntu/Debian)">
+    Run the dependency script that the Tari CI pipeline uses. It installs all required packages including a compatible `protoc`:
+
+    ```bash
+    sudo apt-get update
+    sudo bash scripts/install_ubuntu_dependencies.sh
+    ```
+  </Tab>
+  <Tab title="macOS">
+    Use Homebrew to install the required dependencies:
+
+    ```bash
+    brew update
+    brew install cmake coreutils automake autoconf libtool protobuf zip
+    ```
+  </Tab>
+  <Tab title="Windows">
+    Follow the guide in [`buildtools/windows-dev-environment-notes.md`](https://github.com/tari-project/tari/blob/development/buildtools/windows-dev-environment-notes.md) in the Tari repository to set up your build environment, including the Visual Studio C++ toolchain and `protoc`.
+  </Tab>
+</Tabs>
+
+### Choose a network target
+
+When building from source, you select which networks your binary can run on by setting the `TARI_TARGET_NETWORK` environment variable at compile time:
+
+| `TARI_TARGET_NETWORK` | Default network | Networks supported |
+|---|---|---|
+| *(unset)* | esmeralda | esmeralda, localnet |
+| `testnet` | esmeralda | esmeralda, localnet |
+| `nextnet` | nextnet | nextnet |
+| `mainnet` | mainnet | mainnet, stagenet |
+
+For a **Mainnet** build (exchange and production use):
+
+```bash
+export TARI_TARGET_NETWORK=mainnet
+```
+
+### Build
+
+<Tabs>
+  <Tab title="Linux / macOS">
+    Clone the repository and build the base node in release mode:
+
+    ```bash
+    git clone https://github.com/tari-project/tari.git
+    cd tari
+    TARI_TARGET_NETWORK=mainnet cargo build --release --bin minotari_node
+    ```
+
+    To build all five published binaries at once:
+
+    ```bash
+    TARI_TARGET_NETWORK=mainnet cargo build --release
+    ```
+
+    Compiled executables are placed in `./target/release/`.
+  </Tab>
+  <Tab title="Windows">
+    Open an **x64 Native Tools Command Prompt for VS** (installed with Visual Studio), then:
+
+    ```bat
+    cd %USERPROFILE%\Code\tari
+    set TARI_TARGET_NETWORK=mainnet
+    cargo build --release
+    ```
+
+    Compiled executables are placed in `.\target\release\`.
+  </Tab>
+</Tabs>
+
+### Install to PATH (optional)
+
+Use `cargo install` to place binaries in `~/.cargo/bin` so you can run them from anywhere:
+
+```bash
+cargo install --path=applications/minotari_node --force
+cargo install --path=applications/minotari_console_wallet --force
+cargo install --path=applications/minotari_merge_mining_proxy --force
+cargo install --path=applications/minotari_miner --force
+cargo install --path=applications/minotari_offline_signer --force
+```
+
+---
+
+## First run
+
+Whether you downloaded a binary or built from source, the first launch follows the same steps.
+
+<Steps>
+  <Step title="Start the node">
+    ```bash
+    minotari_node
+    ```
+
+    If no configuration file exists yet, the node detects this and walks you through initial setup prompts.
+  </Step>
+
+  <Step title="Answer the setup prompts">
+    - **Would you like to mine?** — Type `n` and press Enter. Mining adds additional gRPC methods; leave it disabled unless you intend to mine from this node.
+    - **Would you like to create a node identity?** — Type `y` and press Enter. This generates your node's cryptographic identity (public/private key pair) and registers it on the network.
+  </Step>
+
+  <Step title="Note your node identity">
+    Once the node starts, type `whoami` at the interactive console prompt and press Enter. You will see output similar to:
+
+    ```
+    >> whoami
+    Public Key: 90f67a04edcb36261e6304ca213629d183c44e26bd47e38c253473f44d901733
+    Node ID: e8ed9a4fd38577b6b01e3b8e9d
+    Public Addresses: /onion3/f5qbkkfkoxowzvshe5mppzpgiiy76cwumpsacungeldoal6hehcgzfqd:18141
+    Features: PeerFeatures(MESSAGE_PROPAGATION | DHT_STORE_FORWARD)
+    ```
+
+    Save your **Public Key** and **Public Addresses** to a secure location. You will need them if you configure a wallet to connect to this specific node.
+  </Step>
+
+  <Step title="Wait for sync">
+    The node connects to peers and begins downloading the blockchain. Watch the progress with:
+
+    ```
+    >> watch status
+    ```
+
+    Syncing from genesis takes time depending on your hardware and connection. The status display shows the current sync state and block height.
+  </Step>
+</Steps>
+
+## Interactive console commands
+
+The base node runs an interactive console while it is operating. Press `Tab` for auto-completion or type `help` to list all available commands.
+
+| Command | Description |
+|---|---|
+| `watch status` | Auto-refreshing status display showing sync state, tip height, peers, and mempool. |
+| `whoami` | Displays your node's Public Key, Node ID, and public addresses. |
+| `version` | Shows the running version of the Minotari node. |
+| `get-chain-metadata` | Returns the current tip height, total accumulated difficulty, and best block hash. |
+| `list-peers` | Lists all peers your node is currently connected to. |
+| `help` | Lists all available commands. |
+| `quit` / `exit` | Gracefully shuts down the node. |
+
+<Tip>
+  Pass `--non-interactive-mode` when starting the node to disable the interactive console. This is useful for running the node as a background service or in a Docker container.
+</Tip>
+
+## Data directory
+
+By default, all blockchain data, wallet databases, log files, and configuration are stored under:
+
+- **Linux / macOS**: `~/.tari/<network>/`
+- **Windows**: `%USERPROFILE%\.tari\<network>\`
+
+To use a custom location, pass the `--base-path` (or `-b`) flag:
+
+```bash
+minotari_node --base-path /data/tari
+```

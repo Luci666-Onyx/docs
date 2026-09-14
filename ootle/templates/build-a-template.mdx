@@ -1,0 +1,407 @@
+---
+title: "Build a Guessing Game Template on the Tari Ootle"
+sidebarTitle: "Build a Template"
+description: "Step-by-step walkthrough building a decentralized guessing game template to learn Vaults, Buckets, ResourceBuilder, and access control."
+---
+
+This guide walks you through building a complete, working decentralized guessing game on the Tari Ootle. Players submit guesses for a secret number, and the winner receives a unique NFT prize. Along the way you'll learn how to create on-chain resources, manage assets with Vaults and Buckets, restrict methods with access rules, and generate random numbers inside a deterministic execution environment.
+
+## What You'll Build
+
+The rules for the game:
+
+1. Players guess a number between 0 and 10
+2. Up to 5 players can participate per round
+3. Each player may only guess once per round
+4. No one knows the correct number ahead of time
+5. The winner receives a unique limited-edition NFT prize
+6. Only one prize is awarded per round — if multiple players guess correctly, the first to be processed wins
+7. Only the component creator can start a new round
+8. If there are no winners, the prize is burned
+
+## Topics Covered
+
+<CardGroup cols={2}>
+  <Card title="ResourceBuilder" icon="coins">
+    Create a custom non-fungible resource for prize NFTs
+  </Card>
+  <Card title="Vaults & Buckets" icon="vault">
+    Hold the prize vault and transfer the NFT to the winner
+  </Card>
+  <Card title="ComponentAccessRules" icon="lock">
+    Allow anyone to guess while restricting game control to the creator
+  </Card>
+  <Card title="Random Numbers" icon="dice">
+    Generate a pseudo-random winning number in a deterministic environment
+  </Card>
+</CardGroup>
+
+<Steps>
+
+### Step 1: Generate the Project
+
+Use `cargo-generate` to scaffold a new template crate with all the right dependencies pre-configured.
+
+```bash
+# Install cargo-generate if you haven't already
+cargo install cargo-generate
+
+# Create your new template crate
+cargo generate https://github.com/tari-project/wasm-template wasm_templates/empty \
+  -din_cargo_workspace=false --name guessing_game
+
+cd guessing_game
+cargo test
+```
+
+You should see output similar to:
+
+```
+running 1 test
+test it_works ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored
+```
+
+Your new crate has this structure:
+
+```
+guessing_game
+├── Cargo.toml        ← dependencies
+└── src
+    └── lib.rs        ← template source code
+└── tests
+    └── test.rs       ← unit tests
+```
+
+### Step 2: Define the Component Struct
+
+Open `src/lib.rs` and replace its contents with the module scaffold and component state. You need to track the prize vault, the player guesses, and the current round number.
+
+<CodeGroup>
+```rust Component State
+use tari_template_lib::prelude::*;
+use std::collections::HashMap;
+
+#[template]
+mod template {
+    use super::*;
+
+    pub struct GuessingGame {
+        /// Holds the NFT prize for the current round,
+        /// or is empty if no round is active.
+        prize_vault: Vault,
+        /// Maps each player's public key to their guess for this round.
+        guesses: HashMap<RistrettoPublicKeyBytes, Guess>,
+        /// The current round number, starting at 0.
+        round_number: u32,
+    }
+
+    /// Holds a player's guess and where to send their winnings.
+    pub struct Guess {
+        /// The component (typically an account) that receives the prize.
+        pub payout_to: ComponentManager,
+        /// The player's guessed number (0–10).
+        pub guess: u8,
+    }
+
+    // impl block follows in the next steps ...
+}
+```
+</CodeGroup>
+
+<Tip>
+  Structs declared *inside* the `#[template]` module automatically receive CBOR encoding derives. You don't need to add `#[derive(...)]` yourself.
+</Tip>
+
+### Step 3: Implement the Constructor
+
+The constructor creates the prize NFT resource and sets up the component with access rules that allow anyone to call `guess`.
+
+<CodeGroup>
+```rust Constructor
+impl GuessingGame {
+    pub fn new() -> Component<Self> {
+        // Create a new non-fungible resource that uniquely represents prizes.
+        // build() returns the ResourceAddress — used to create the vault.
+        let prize_resource = ResourceBuilder::non_fungible()
+            .metadata("name", "Guessing Game Prize")
+            .with_token_symbol("🎲")
+            .build();
+
+        // Set access rules: anyone can call `guess`;
+        // all other methods require the component owner.
+        let access_rules = ComponentAccessRules::new()
+            .method("guess", rule![allow_all]);
+
+        Component::new(Self {
+            prize_vault: Vault::new_empty(prize_resource),
+            guesses: HashMap::new(),
+            round_number: 0,
+        })
+        .with_access_rules(access_rules)
+        .create()
+    }
+}
+```
+</CodeGroup>
+
+<Tip>
+  `Vault::new_empty(resource_address)` creates an empty vault typed to hold exactly that resource. You **must** store the vault in a component before the function returns, or the transaction will fail.
+</Tip>
+
+### Step 4: Start a Round
+
+Add a `start_game` method that mints a fresh prize NFT and deposits it into the vault. This method is restricted to the component owner by default.
+
+<CodeGroup>
+```rust Starting a Round
+pub fn start_game(&mut self, prize_id: NonFungibleId) {
+    self.round_number += 1;
+
+    // Get the ResourceManager for the resource held by the vault.
+    let manager = self.prize_vault.get_resource_manager();
+
+    // Mint the prize NFT with the round number as immutable metadata.
+    let prize = manager.mint_non_fungible(
+        prize_id,
+        &metadata!["round" => self.round_number.to_string()],
+        &(), // empty mutable data
+    );
+
+    // Hold the prize in the vault until the game ends.
+    self.prize_vault.deposit(prize);
+}
+```
+</CodeGroup>
+
+### Step 5: Accept Player Guesses
+
+Add a `guess` method that records a player's guess. The method uses `CallerContext` to identify the caller so players cannot impersonate each other.
+
+<CodeGroup>
+```rust Accepting Guesses
+pub fn guess(&mut self, guess: u8, payout_to: ComponentAddress) {
+    assert!(guess <= 10, "Panic! Guess must be from 0 to 10");
+    assert!(
+        self.prize_vault.balance() > Amount::zero(),
+        "No active round — wait for start_game"
+    );
+    assert!(
+        self.guesses.len() < 5,
+        "Maximum players reached for this round"
+    );
+
+    // Use the authenticated signer identity — never take this as a method argument.
+    let player = CallerContext::transaction_signer_public_key();
+    let payout_to = ComponentManager::get(payout_to);
+
+    let previous = self.guesses.insert(player, Guess { payout_to, guess });
+    assert!(previous.is_none(), "You already guessed in this round");
+}
+```
+</CodeGroup>
+
+<Warning>
+  Never accept a player's public key as a method argument — it can be spoofed. Always use `CallerContext::transaction_signer_public_key()` to get the authenticated identity of the transaction signer.
+</Warning>
+
+### Step 6: End the Game and Award the Prize
+
+Add `end_game_and_payout` to determine the winner, award the prize via a cross-component call, and burn the prize if nobody wins.
+
+<CodeGroup>
+```rust Ending the Game
+pub fn end_game_and_payout(&mut self) {
+    // Withdraw the prize from the vault into a bucket.
+    let prize = self.prize_vault.withdraw(Amount::from(1u64));
+
+    // Generate a pseudo-random winning number.
+    let number = generate_number();
+
+    // Drain the guesses so they're cleared for the next round.
+    let guesses = mem::take(&mut self.guesses);
+
+    for (_player, guess) in guesses {
+        if guess.guess == number {
+            // Cross-component call: invoke `deposit` on the winner's account.
+            guess.payout_to.invoke("deposit", args![prize]);
+            return;
+        }
+    }
+
+    // No winner — permanently destroy the prize.
+    prize.burn();
+}
+```
+
+```rust Random Number Helper
+// Place this outside the impl block, inside the template module.
+fn generate_number() -> u8 {
+    use tari_template_lib::rand::random_bytes;
+    // random_bytes calls the execution engine for deterministic entropy.
+    let num = random_bytes(1)[0];
+    // Map to a number between 0 and 10 (inclusive).
+    num % 11
+}
+```
+</CodeGroup>
+
+<Warning>
+  `random_bytes` produces deterministic bytes derived from the transaction itself — not cryptographically unpredictable entropy. It is sufficient for a game but should not be used for security-critical randomness.
+</Warning>
+
+### Step 7: Write Tests
+
+Use the `tari_template_test_tooling` crate to test your template locally without a live node. The test harness compiles your template to WASM and runs transactions with the same engine the network uses.
+
+<CodeGroup>
+```rust tests/test.rs
+use tari_template_test_tooling::{
+    TemplateTest,
+    transaction::{args, Transaction},
+};
+
+#[test]
+fn test_guessing_game() {
+    let mut test = TemplateTest::my_crate();
+    let template = test.get_template_address("GuessingGame");
+
+    // Create two accounts: the game creator and a player.
+    let (creator_account, _creator_proof, creator_key) =
+        test.create_funded_account();
+    let (player_account, _player_proof, player_key) =
+        test.create_funded_account();
+
+    // Deploy the game and start round 1 (owner-only, sealed with creator key).
+    test.execute_expect_success(
+        test.transaction()
+            .allocate_component_address("game")
+            .call_function(template, "new", args![Workspace("game")])
+            .call_method("game", "start_game", args![
+                NonFungibleId::from_string("prize-round-1")
+            ])
+            .build_and_seal(test.secret_key()),
+        vec![],
+    );
+
+    let (game, _) = test
+        .read_only_state_store()
+        .get_components_by_template_address(template)
+        .unwrap()
+        .remove(0);
+
+    // Player submits a guess (public method, sealed with player key).
+    test.execute_expect_success(
+        test.transaction()
+            .call_method(game, "guess", args![5u8, player_account])
+            .build_and_seal(&player_key),
+        vec![],
+    );
+
+    // Owner ends the game.
+    test.execute_expect_success(
+        test.transaction()
+            .call_method(game, "end_game_and_payout", args![])
+            .build_and_seal(test.secret_key()),
+        vec![],
+    );
+}
+
+#[test]
+fn test_duplicate_guess_rejected() {
+    let mut test = TemplateTest::my_crate();
+    let template = test.get_template_address("GuessingGame");
+    let (player_account, _proof, player_key) = test.create_funded_account();
+
+    test.execute_expect_success(
+        test.transaction()
+            .allocate_component_address("game")
+            .call_function(template, "new", args![Workspace("game")])
+            .call_method("game", "start_game", args![
+                NonFungibleId::from_string("prize-round-1")
+            ])
+            .build_and_seal(test.secret_key()),
+        vec![],
+    );
+
+    let (game, _) = test
+        .read_only_state_store()
+        .get_components_by_template_address(template)
+        .unwrap()
+        .remove(0);
+
+    // First guess succeeds.
+    test.execute_expect_success(
+        test.transaction()
+            .call_method(game, "guess", args![3u8, player_account])
+            .build_and_seal(&player_key),
+        vec![],
+    );
+
+    // Second guess from same player should be rejected.
+    let reason = test.execute_expect_failure(
+        test.transaction()
+            .call_method(game, "guess", args![7u8, player_account])
+            .build_and_seal(&player_key),
+        vec![],
+    );
+
+    assert_reject_reason(reason, "You already guessed in this round");
+}
+```
+</CodeGroup>
+
+Run your tests with:
+
+```bash
+cargo test
+```
+
+<Tip>
+  Template tests use the Cranelift JIT compiler and can be slow in debug builds. Add the following to your `Cargo.toml` to make tests roughly 10x faster:
+
+  ```toml
+  [profile.dev.package.wasmer]
+  opt-level = 2
+  [profile.dev.package.wasmer-compiler]
+  opt-level = 2
+  [profile.dev.package.wasmer-compiler-cranelift]
+  opt-level = 2
+  [profile.dev.package.cranelift-codegen]
+  opt-level = 2
+  [profile.dev.package.cranelift-frontend]
+  opt-level = 2
+  [profile.dev.package.cranelift-entity]
+  opt-level = 2
+  ```
+</Tip>
+
+</Steps>
+
+## Full Annotated Code
+
+You can download the complete working template using `cargo-generate`:
+
+```bash
+cargo generate https://github.com/tari-project/wasm-template examples/guessing_game/template
+```
+
+The full source is also available on [GitHub](https://github.com/tari-project/wasm-template/tree/main/examples/guessing_game/template).
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Resources & Vaults" icon="box" href="/ootle/templates/resources-and-vaults">
+    Learn more about ResourceBuilder, fungible tokens, and NFTs.
+  </Card>
+  <Card title="Access Control" icon="lock" href="/ootle/templates/access-control">
+    Deep dive into ComponentAccessRules and proof-based authorization.
+  </Card>
+  <Card title="Testing" icon="flask" href="/ootle/templates/testing">
+    Master the TemplateTest harness for comprehensive unit testing.
+  </Card>
+  <Card title="Publishing" icon="upload" href="/ootle/publishing">
+    Publish your completed template to the Tari network.
+  </Card>
+</CardGroup>

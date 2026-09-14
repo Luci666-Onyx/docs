@@ -1,0 +1,403 @@
+---
+title: "Base Node gRPC API Reference for Minotari"
+sidebarTitle: "Node gRPC"
+description: "Complete reference for the Minotari Base Node gRPC API: chain state, sync status, peer management, block queries, and payment reference search."
+---
+
+The Minotari Base Node exposes a gRPC server on `127.0.0.1:18142` (configurable). All methods are defined in `base_node.proto`. Use this API to query blockchain state, monitor sync progress, manage peers, and search for outputs on-chain.
+
+## Connection
+
+```bash
+# Verify node is reachable
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetVersion
+```
+
+<Warning>
+The base node gRPC port (`18142`) and wallet gRPC port (`18143`) should **only** be accessible from `localhost`. Never expose these ports to the public internet. Doing so would allow anyone to query your node or wallet, potentially exposing sensitive operational data.
+</Warning>
+
+---
+
+## GetVersion
+
+Returns the version string of the running Minotari Base Node software.
+
+**Request**: No parameters required.
+
+<ResponseField name="value" type="string">
+  The base node software version string (e.g., `"1.8.0"`).
+</ResponseField>
+
+```bash
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetVersion
+```
+
+---
+
+## Identify
+
+Returns the node's network identity, including its public key, Node ID, public addresses, and feature flags. Use this to confirm you are connected to the expected node and to retrieve its identity for peer management.
+
+**Request**: No parameters required.
+
+<ResponseField name="public_key" type="bytes">
+  The node's 32-byte public key (hex-encoded in JSON responses).
+</ResponseField>
+<ResponseField name="node_id" type="bytes">
+  The node's unique peer ID on the Tari P2P network.
+</ResponseField>
+<ResponseField name="public_addresses" type="array">
+  List of public network addresses this node is reachable on.
+</ResponseField>
+<ResponseField name="user_agent" type="string">
+  The software user-agent string, including version and feature flags.
+</ResponseField>
+
+```bash
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/Identify
+```
+
+---
+
+## GetTipInfo
+
+Returns the current state of the blockchain tip, including the best known block height, block hash, accumulated proof-of-work difficulty, and whether the initial sync has completed. This is the primary method for confirming your node is in sync before relying on it for deposit processing.
+
+**Request**: No parameters required.
+
+<ResponseField name="metadata.best_block_height" type="uint64">
+  The block height of the current chain tip.
+</ResponseField>
+<ResponseField name="metadata.best_block_hash" type="bytes">
+  The hash of the best known block (hex-encoded in JSON responses).
+</ResponseField>
+<ResponseField name="metadata.accumulated_difficulty" type="string">
+  Total accumulated proof-of-work difficulty on the main chain.
+</ResponseField>
+<ResponseField name="initial_sync_achieved" type="bool">
+  `true` if the node has completed its initial blockchain sync. Only trust the chain state for deposit detection once this is `true`.
+</ResponseField>
+
+```bash
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetTipInfo
+```
+
+---
+
+## GetSyncInfo
+
+Returns detailed information about the node's current synchronization state, including the range of blocks being synced and the network tip as reported by peers.
+
+**Request**: No parameters required.
+
+<ResponseField name="tip_height" type="uint64">
+  The network tip height as reported by connected peers.
+</ResponseField>
+<ResponseField name="local_height" type="uint64">
+  The node's current local blockchain height.
+</ResponseField>
+<ResponseField name="peer_node_ids" type="array">
+  List of peer Node IDs contributing to the sync tip estimate.
+</ResponseField>
+
+```bash
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetSyncInfo
+```
+
+---
+
+## GetSyncProgress
+
+Returns the node's sync progress along with a human-readable state description. Use this to display sync status in dashboards or to gate deposit processing on completion of initial sync.
+
+**Request**: No parameters required.
+
+<ResponseField name="state" type="string">
+  Current sync state. Common values include `"Starting"`, `"Connecting"`, `"HeaderSync"`, `"BlockSync"`, `"Done"`.
+</ResponseField>
+<ResponseField name="initial_sync_achieved" type="bool">
+  `true` once the node has fully synced to the network tip.
+</ResponseField>
+<ResponseField name="local_height" type="uint64">
+  The node's current chain height.
+</ResponseField>
+<ResponseField name="tip_height" type="uint64">
+  The estimated network tip height.
+</ResponseField>
+
+```bash
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetSyncProgress
+```
+
+---
+
+## GetNetworkState
+
+Returns a comprehensive view of the node's network state, including peer count and current chain difficulty. Use this to confirm the node is well-connected before trusting its view of the chain.
+
+**Request**: No parameters required.
+
+<ResponseField name="num_node_connections" type="uint64">
+  The number of currently active peer connections.
+</ResponseField>
+<ResponseField name="local_metadata.best_block_height" type="uint64">
+  The local chain tip height.
+</ResponseField>
+<ResponseField name="local_metadata.accumulated_difficulty" type="string">
+  Accumulated difficulty at the local chain tip.
+</ResponseField>
+
+```bash
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetNetworkState
+```
+
+---
+
+## GetConstants
+
+Returns the consensus constants in effect at a given block height. Consensus constants encode the protocol rules—such as coinbase maturity, maximum block weight, and emission schedule parameters—that govern how blocks and transactions are validated at that height. These constants may change at hard fork boundaries.
+
+<ParamField body="block_height" type="uint64" required>
+  The block height for which you want the consensus constants. Use `0` to retrieve the genesis constants, or pass the current tip height for the active constants.
+</ParamField>
+
+<ResponseField name="coinbase_min_maturity" type="uint64">
+  Minimum number of confirmations required before a coinbase output can be spent.
+</ResponseField>
+<ResponseField name="blockchain_version" type="uint32">
+  Protocol version in effect at the specified block height.
+</ResponseField>
+<ResponseField name="max_transaction_weight" type="uint64">
+  Maximum allowed transaction weight in grams.
+</ResponseField>
+<ResponseField name="faucet_value" type="uint64">
+  Initial faucet/genesis reward value in microXTM (network-specific).
+</ResponseField>
+
+<CodeGroup>
+```bash grpcurl
+# Get consensus constants for the current tip
+TIP_HEIGHT=$(grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetTipInfo \
+  | jq -r '.metadata.best_block_height // 0')
+
+grpcurl -plaintext \
+  -d "{\"block_height\": $TIP_HEIGHT}" \
+  localhost:18142 tari.rpc.BaseNode/GetConstants
+```
+
+```bash grpcurl (genesis)
+# Get genesis consensus constants
+grpcurl -plaintext \
+  -d '{"block_height": 0}' \
+  localhost:18142 tari.rpc.BaseNode/GetConstants
+```
+</CodeGroup>
+
+---
+
+## CheckForUpdates
+
+Checks whether a newer version of the Minotari Base Node software is available. Useful for automated monitoring and alerting pipelines that track software currency.
+
+**Request**: No parameters required.
+
+<ResponseField name="has_update" type="bool">
+  `true` if a newer software version is available for download.
+</ResponseField>
+<ResponseField name="version" type="string">
+  The latest available version string (only populated when `has_update` is `true`).
+</ResponseField>
+<ResponseField name="sha" type="string">
+  The git commit SHA of the latest available release.
+</ResponseField>
+
+<CodeGroup>
+```bash grpcurl
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/CheckForUpdates
+```
+
+```bash Shell script with alerting
+UPDATE_INFO=$(grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/CheckForUpdates 2>/dev/null)
+HAS_UPDATE=$(echo "$UPDATE_INFO" | jq -r '.has_update // false')
+
+if [ "$HAS_UPDATE" = "true" ]; then
+  NEW_VERSION=$(echo "$UPDATE_INFO" | jq -r '.version // "unknown"')
+  echo "⚠️  Update available: $NEW_VERSION"
+else
+  echo "✅ Software is up to date"
+fi
+```
+</CodeGroup>
+
+---
+
+## ListConnectedPeers
+
+Returns a list of peers currently connected to the base node. Use this to verify network connectivity and diagnose sync issues caused by insufficient peer connections.
+
+**Request**: No parameters required.
+
+<ResponseField name="connected_peers" type="array">
+  Array of connected peer objects.
+
+  <ResponseField name="connected_peers[].node_id" type="string">
+    The peer's Node ID.
+  </ResponseField>
+  <ResponseField name="connected_peers[].public_key" type="string">
+    The peer's public key (hex-encoded).
+  </ResponseField>
+  <ResponseField name="connected_peers[].address" type="string">
+    The peer's network address.
+  </ResponseField>
+  <ResponseField name="connected_peers[].user_agent" type="string">
+    The peer's software version and feature flags.
+  </ResponseField>
+  <ResponseField name="connected_peers[].last_seen" type="int64">
+    Unix timestamp of the most recent activity with this peer.
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+```bash grpcurl
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/ListConnectedPeers
+```
+
+```bash Check peer count
+PEERS=$(grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/ListConnectedPeers 2>/dev/null)
+PEER_COUNT=$(echo "$PEERS" | jq '.connected_peers | length')
+echo "Connected peers: $PEER_COUNT"
+
+if [ "$PEER_COUNT" -lt 3 ]; then
+  echo "⚠️ Low peer count — node may have limited network visibility"
+fi
+```
+</CodeGroup>
+
+---
+
+## GetMaxHeight
+
+Returns the maximum block height seen across all connected peers. This is the network's view of the chain tip from your node's perspective, and is useful for determining how far behind your local chain is relative to the broader network.
+
+**Request**: No parameters required.
+
+<ResponseField name="max_height" type="uint64">
+  The highest block height reported by any connected peer.
+</ResponseField>
+
+<CodeGroup>
+```bash grpcurl
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetMaxHeight
+```
+
+```javascript Node.js
+const response = await client.getTipInfo();
+const localHeight = response.metadata.best_block_height;
+
+// Compare to max peer height to check how far behind you are
+const maxHeightResponse = await client.getMaxHeight();
+const peerMax = maxHeightResponse.max_height;
+const blocksBehind = peerMax - localHeight;
+
+console.log(`Local height: ${localHeight}`);
+console.log(`Network height: ${peerMax}`);
+console.log(`Blocks behind: ${blocksBehind}`);
+```
+</CodeGroup>
+
+---
+
+## SearchPaymentReferences
+
+Searches for transaction outputs associated with one or more Payment References (PayRefs). This is the primary method for confirming that a deposit output has been mined on-chain. Each PayRef is a 32-byte Blake2b-256 digest derived from the `block_hash` and `output_hash` of the mined output.
+
+PayRefs are unique, deterministic, and unlinkable to addresses or amounts. Both your exchange and the depositing user can independently compute the same PayRef once the output is confirmed.
+
+<ParamField body="payment_reference_hex" type="array" required>
+  Array of PayRef hex strings to search for. Each entry must be a **64-character hex string** (representing 32 bytes). You may search for multiple PayRefs in a single request.
+</ParamField>
+
+<ParamField body="include_spent" type="bool">
+  Optional. Set to `true` to include outputs that have already been spent. Defaults to `false`.
+</ParamField>
+
+<ResponseField name="payment_reference_hex" type="string">
+  The PayRef hex string that matched this result.
+</ResponseField>
+<ResponseField name="block_height" type="uint64">
+  The block height at which the output was mined.
+</ResponseField>
+<ResponseField name="block_hash" type="string">
+  Hex-encoded hash of the block containing the output.
+</ResponseField>
+<ResponseField name="mined_timestamp" type="int64">
+  Unix timestamp (UTC, seconds since epoch) when the output was mined.
+</ResponseField>
+<ResponseField name="commitment" type="string">
+  Hex-encoded Pedersen commitment of the output (32 bytes).
+</ResponseField>
+<ResponseField name="is_spent" type="bool">
+  `true` if this output has been spent.
+</ResponseField>
+<ResponseField name="spent_height" type="uint64">
+  Block height where the output was spent. `0` if unspent.
+</ResponseField>
+<ResponseField name="spent_block_hash" type="string">
+  Hex-encoded hash of the block where the output was spent (if spent).
+</ResponseField>
+<ResponseField name="revealed_amount" type="uint64">
+  The output amount in microXTM, if revealed. For confidential transactions this field may be absent.
+</ResponseField>
+
+<CodeGroup>
+```bash grpcurl
+grpcurl -plaintext \
+  -d '{
+    "payment_reference_hex": [
+      "a1b2c3d4e5f67890123456789012345678901234567890123456789012345678"
+    ],
+    "include_spent": false
+  }' \
+  localhost:18142 tari.rpc.BaseNode/SearchPaymentReferences
+```
+
+```javascript Node.js
+const payrefResponses = client.searchPaymentReferences({
+  payment_reference_hex: [
+    'a1b2c3d4e5f67890123456789012345678901234567890123456789012345678',
+    'b2c3d4e5f6789012345678901234567890123456789012345678901234567890ab'
+  ],
+  include_spent: false,
+});
+
+for await (const resp of payrefResponses) {
+  console.log('PayRef:', resp.payment_reference_hex);
+  console.log('Block height:', resp.block_height);
+  console.log('Mined at:', new Date(resp.mined_timestamp * 1000).toISOString());
+  console.log('Is spent:', resp.is_spent);
+}
+```
+</CodeGroup>
+
+**Example response:**
+
+```json
+{
+  "payment_reference_hex": "a1b2c3d4e5f67890123456789012345678901234567890123456789012345678",
+  "block_height": 10203,
+  "block_hash": "0000abcdef1234...",
+  "mined_timestamp": 1714328123,
+  "commitment": "02aabbccdd...",
+  "is_spent": false,
+  "spent_height": 0,
+  "revealed_amount": 1000000
+}
+```
+
+<Note>
+- If a given PayRef is not found on-chain, no response entry is returned for it.
+- If a PayRef is not a valid 64-character hex string, the API returns an error for that entry.
+- Responses are streamed — one message per matched PayRef.
+- PayRefs are tied to the specific block in which the output was mined. After a chain reorganization, a PayRef may no longer be valid. Wait for at least **6 block confirmations** before treating a PayRef as permanently settled.
+</Note>

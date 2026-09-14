@@ -1,0 +1,675 @@
+---
+title: "Wallet gRPC API Reference for Minotari"
+sidebarTitle: "Wallet gRPC"
+description: "Complete reference for the Minotari Console Wallet gRPC API: balance, addresses, payment IDs, transactions, transfers, and streaming events."
+---
+
+The Minotari Console Wallet exposes a gRPC server on `127.0.0.1:18143` (configurable). All methods are defined in `wallet.proto`. Use this API to query balances, generate deposit addresses, send transactions, and stream real-time transaction events.
+
+## Connection
+
+```bash
+# Verify wallet is reachable
+grpcurl -plaintext localhost:18143 tari.rpc.Wallet/GetVersion
+```
+
+**Authentication**: If gRPC authentication is configured, pass credentials via gRPC metadata:
+
+```bash
+grpcurl -plaintext \
+  -H "authorization: Basic $(echo -n 'user:password' | base64)" \
+  localhost:18143 tari.rpc.Wallet/GetVersion
+```
+
+<Note>
+All amounts in the Wallet gRPC API are denominated in **microXTM (µXTM)**. To convert to XTM, divide by 1,000,000. For example, `1000000` µXTM = `1.0` XTM.
+</Note>
+
+<Tip>
+Use `StreamTransactionEvents` rather than polling `GetCompletedTransactions` in production. Streaming delivers real-time event notifications with lower latency and far less overhead on both the wallet and your integration service.
+</Tip>
+
+---
+
+## GetVersion
+
+Returns the version string of the running Minotari Console Wallet software.
+
+**Request**: No parameters required.
+
+<ResponseField name="value" type="string">
+  The wallet software version string (e.g., `"1.8.0"`).
+</ResponseField>
+
+```bash
+grpcurl -plaintext localhost:18143 tari.rpc.Wallet/GetVersion
+```
+
+---
+
+## GetState
+
+Returns a comprehensive snapshot of the wallet's current status, including blockchain sync height, balance information, and network connectivity.
+
+**Request**: No parameters required.
+
+<ResponseField name="scanned_height" type="uint64">
+  The block height up to which the wallet has scanned for outputs.
+</ResponseField>
+<ResponseField name="balance.available_balance" type="uint64">
+  Spendable balance in microXTM.
+</ResponseField>
+<ResponseField name="balance.pending_incoming_balance" type="uint64">
+  Balance from incoming transactions not yet confirmed, in microXTM.
+</ResponseField>
+<ResponseField name="balance.pending_outgoing_balance" type="uint64">
+  Balance locked in outgoing transactions awaiting confirmation, in microXTM.
+</ResponseField>
+<ResponseField name="balance.timelocked_balance" type="uint64">
+  Balance locked by a time-lock condition, in microXTM.
+</ResponseField>
+
+```bash
+grpcurl -plaintext localhost:18143 tari.rpc.Wallet/GetState
+```
+
+---
+
+## CheckConnectivity
+
+Performs a quick connectivity check without retrieving full wallet state. Use this as a lightweight health probe.
+
+**Request**: No parameters required.
+
+<ResponseField name="status" type="int32">
+  Connectivity status code. `0` indicates the wallet is online and connected.
+</ResponseField>
+
+```bash
+grpcurl -plaintext localhost:18143 tari.rpc.Wallet/CheckConnectivity
+```
+
+---
+
+## Identify
+
+Returns the wallet's public key and associated network addresses. Use this to confirm you are connected to the correct wallet instance.
+
+**Request**: No parameters required.
+
+<ResponseField name="public_key" type="bytes">
+  The wallet's 32-byte public key (hex-encoded in JSON responses).
+</ResponseField>
+<ResponseField name="public_address" type="string">
+  The wallet's public network address.
+</ResponseField>
+<ResponseField name="emoji_id" type="string">
+  The Emoji ID representation of the wallet's public key.
+</ResponseField>
+
+```bash
+grpcurl -plaintext localhost:18143 tari.rpc.Wallet/Identify
+```
+
+---
+
+## GetAddress
+
+Returns the wallet's basic address formats in binary representation. Use `GetCompleteAddress` if you need human-readable base58 or Emoji ID formats.
+
+**Request**: No parameters required.
+
+<ResponseField name="address" type="bytes">
+  The wallet address as a raw byte array.
+</ResponseField>
+
+```bash
+grpcurl -plaintext localhost:18143 tari.rpc.Wallet/GetAddress
+```
+
+---
+
+## GetCompleteAddress
+
+Returns the wallet's address in all supported formats: binary, Base58, and Emoji ID. Emoji ID is the recommended format for display, as it is shorter and human-verifiable.
+
+**Request**: No parameters required.
+
+<ResponseField name="interactive_address" type="bytes">
+  Raw bytes of the interactive address.
+</ResponseField>
+<ResponseField name="one_sided_address" type="bytes">
+  Raw bytes of the one-sided address.
+</ResponseField>
+<ResponseField name="interactive_address_base58" type="string">
+  Base58-encoded interactive address.
+</ResponseField>
+<ResponseField name="one_sided_address_base58" type="string">
+  Base58-encoded one-sided address.
+</ResponseField>
+<ResponseField name="interactive_address_emoji" type="string">
+  Emoji ID of the interactive address.
+</ResponseField>
+<ResponseField name="one_sided_address_emoji" type="string">
+  Emoji ID of the one-sided address.
+</ResponseField>
+
+```bash
+grpcurl -plaintext localhost:18143 tari.rpc.Wallet/GetCompleteAddress
+```
+
+---
+
+## GetPaymentIdAddress
+
+Generates a deposit address with an embedded, encrypted Payment ID. Use this to create per-user deposit addresses that allow your exchange to attribute incoming funds to specific customers without exposing the payment ID on-chain.
+
+The `payment_id` is encrypted using the public keys of the address and is invisible to third parties. See [RFC-0155 TariAddress](https://rfc.tari.com/RFC-0155_TariAddress) for the full address specification.
+
+<ParamField body="payment_id" type="bytes" required>
+  UTF-8 encoded byte array identifying the payment (e.g., a customer ID or deposit reference). Maximum size is **256 bytes**. Larger values will be rejected.
+</ParamField>
+
+<ResponseField name="interactive_address" type="bytes">
+  Raw bytes of the interactive address with embedded Payment ID.
+</ResponseField>
+<ResponseField name="one_sided_address" type="bytes">
+  Raw bytes of the one-sided address with embedded Payment ID.
+</ResponseField>
+<ResponseField name="interactive_address_base58" type="string">
+  Base58-encoded interactive address with embedded Payment ID.
+</ResponseField>
+<ResponseField name="one_sided_address_base58" type="string">
+  Base58-encoded one-sided address with embedded Payment ID.
+</ResponseField>
+<ResponseField name="interactive_address_emoji" type="string">
+  Emoji ID of the interactive address with embedded Payment ID.
+</ResponseField>
+<ResponseField name="one_sided_address_emoji" type="string">
+  Emoji ID of the one-sided address with embedded Payment ID. **This is the recommended format to display to depositing users.**
+</ResponseField>
+
+<CodeGroup>
+```bash grpcurl
+PAYMENT_ID="deposit-user123-$(date +%s)"
+PAYMENT_ID_B64=$(echo -n "$PAYMENT_ID" | base64 -w 0)
+grpcurl -plaintext \
+  -d "{\"payment_id\": \"$PAYMENT_ID_B64\"}" \
+  localhost:18143 tari.rpc.Wallet/GetPaymentIdAddress
+```
+
+```javascript Node.js
+const crypto = require('crypto');
+
+// Generate a 32-byte random payment_id
+const paymentId = crypto.randomBytes(32);
+
+client.GetPaymentIdAddress({ payment_id: paymentId }, (error, response) => {
+  if (error) {
+    console.error('gRPC Error:', error);
+    return;
+  }
+  console.log('One-sided Emoji Address:', response.one_sided_address_emoji);
+  console.log('One-sided Base58 Address:', response.one_sided_address_base58);
+});
+```
+</CodeGroup>
+
+**Example response:**
+
+```json
+{
+  "one_sided_address_base58": "12HVCEeZC2RGE4SDn3yGwqz...obB1a6xouGvS5SXwEvXKwK3zLz2rgReL",
+  "one_sided_address_emoji": "🐢📟💤🔌🚑🐛🏦⚽🍓🐭🚁🎢🔪🥐👛🍞📜...🍐🍟💵🎉🍯🎁🎾🎼💻💄🍳🍐🤔🥝🍫👅🚀🐬🎭"
+}
+```
+
+---
+
+## GetBalance
+
+Retrieves the wallet's current balance breakdown. You can optionally filter by `payment_id` to return only the balance attributed to a specific payment identifier.
+
+<ParamField body="payment_id" type="object">
+  Optional. Filter balances to only those associated with a specific Payment ID. Provide the Payment ID in one of these formats:
+
+  - `utf8_string` (string) — A valid UTF-8 string (most common).
+  - `u256` (bytes) — A 32-byte value as a byte array.
+  - `user_bytes` (bytes) — A generic byte array.
+</ParamField>
+
+<ResponseField name="available_balance" type="uint64">
+  Spendable balance in microXTM.
+</ResponseField>
+<ResponseField name="pending_incoming_balance" type="uint64">
+  Funds from unconfirmed inbound transactions, in microXTM.
+</ResponseField>
+<ResponseField name="pending_outgoing_balance" type="uint64">
+  Funds locked in unconfirmed outbound transactions, in microXTM.
+</ResponseField>
+<ResponseField name="timelocked_balance" type="uint64">
+  Funds locked by a time condition and not yet spendable, in microXTM.
+</ResponseField>
+
+<CodeGroup>
+```bash grpcurl (all balances)
+grpcurl -plaintext localhost:18143 tari.rpc.Wallet/GetBalance
+```
+
+```javascript Node.js (filtered by Payment ID)
+const balance = await client.GetBalance({
+  payment_id: {
+    utf8_string: 'deposit-user123'
+  }
+});
+console.log('Available (XTM):', balance.available_balance / 1_000_000);
+console.log('Pending In (XTM):', balance.pending_incoming_balance / 1_000_000);
+console.log('Pending Out (XTM):', balance.pending_outgoing_balance / 1_000_000);
+```
+</CodeGroup>
+
+**Example response:**
+
+```json
+{
+  "available_balance": 1000000,
+  "pending_incoming_balance": 200000,
+  "pending_outgoing_balance": 50000,
+  "timelocked_balance": 0
+}
+```
+
+---
+
+## Transfer
+
+Sends XTM to one or more recipients in a single call. Each recipient in the `recipients` array is processed independently and has its own result entry in the response.
+
+<ParamField body="recipients" type="array" required>
+  Array of recipient objects. Each object contains:
+
+  <ParamField body="recipients[].address" type="string" required>
+    The recipient's Tari address (Base58 or Emoji ID format).
+  </ParamField>
+
+  <ParamField body="recipients[].amount" type="uint64" required>
+    Amount to send in **microXTM**. For example, `1000000` = 1 XTM.
+  </ParamField>
+
+  <ParamField body="recipients[].fee_per_gram" type="uint64" required>
+    Transaction fee per gram in microXTM. A value of `25` is a common starting point.
+  </ParamField>
+
+  <ParamField body="recipients[].payment_type" type="string" required>
+    Payment type. Use `"ONE_SIDED"` for standard exchange withdrawals.
+  </ParamField>
+
+  <ParamField body="recipients[].payment_id" type="bytes">
+    Optional. A payment identifier attached to this output (UTF-8 bytes).
+  </ParamField>
+</ParamField>
+
+<ResponseField name="results" type="array">
+  One result object per recipient.
+
+  <ResponseField name="results[].is_success" type="bool">
+    `true` if the transfer was accepted and broadcast, `false` otherwise.
+  </ResponseField>
+  <ResponseField name="results[].transaction_id" type="uint64">
+    The transaction ID for this transfer (only set when `is_success` is `true`).
+  </ResponseField>
+  <ResponseField name="results[].failure_message" type="string">
+    Human-readable error message when `is_success` is `false`.
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+```bash grpcurl
+grpcurl -plaintext \
+  -d '{
+    "recipients": [{
+      "address": "RECIPIENT_EMOJI_OR_BASE58_ADDRESS",
+      "amount": "1000000",
+      "fee_per_gram": "25",
+      "payment_type": "ONE_SIDED"
+    }]
+  }' \
+  localhost:18143 tari.rpc.Wallet/Transfer
+```
+
+```javascript Node.js
+const transferResponse = await client.Transfer({
+  recipients: [{
+    address: 'recipient-tari-address',
+    amount: 1000000,        // 1 XTM in microXTM
+    fee_per_gram: 25,
+    payment_type: 'ONE_SIDED',
+  }]
+});
+for (const result of transferResponse.results) {
+  if (result.is_success) {
+    console.log('Sent! TX ID:', result.transaction_id);
+  } else {
+    console.error('Failed:', result.failure_message);
+  }
+}
+```
+</CodeGroup>
+
+---
+
+## GetCompletedTransactions
+
+Lists all completed transactions in the wallet. You can optionally filter by `payment_id` to retrieve only transactions associated with a specific payment identifier.
+
+<ParamField body="payment_id" type="object">
+  Optional. Filter by a specific Payment ID. Accepts the same formats as `GetBalance`: `utf8_string`, `u256`, or `user_bytes`.
+</ParamField>
+
+<ResponseField name="transaction" type="object">
+  A transaction record (one record per streamed response message).
+
+  <ResponseField name="tx_id" type="string">
+    Unique transaction identifier (uint64 serialized as string).
+  </ResponseField>
+  <ResponseField name="source_address" type="string">
+    Sending address.
+  </ResponseField>
+  <ResponseField name="dest_address" type="string">
+    Destination address.
+  </ResponseField>
+  <ResponseField name="status" type="int32">
+    Transaction status code (e.g., `3` = Confirmed).
+  </ResponseField>
+  <ResponseField name="amount" type="string">
+    Transaction amount in microXTM.
+  </ResponseField>
+  <ResponseField name="direction" type="int32">
+    `1` = Inbound, `2` = Outbound.
+  </ResponseField>
+  <ResponseField name="fee" type="string">
+    Transaction fee paid in microXTM.
+  </ResponseField>
+  <ResponseField name="timestamp" type="int64">
+    Unix timestamp (seconds since epoch) of the transaction.
+  </ResponseField>
+  <ResponseField name="excess_sig" type="string">
+    Hex-encoded transaction excess signature.
+  </ResponseField>
+  <ResponseField name="payment_id" type="string">
+    Raw hex-encoded Payment ID attached to the transaction (if any).
+  </ResponseField>
+  <ResponseField name="mined_in_block_height" type="uint64">
+    Block height in which the transaction was mined. `0` if not yet mined.
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+```bash grpcurl (all transactions)
+grpcurl -plaintext localhost:18143 tari.rpc.Wallet/GetCompletedTransactions
+```
+
+```javascript Node.js (filtered by Payment ID)
+const stream = client.GetCompletedTransactions({
+  payment_id: { utf8_string: 'deposit-user123' }
+});
+for await (const { transaction } of stream) {
+  console.log('TX ID:', transaction.tx_id, 'Amount:', transaction.amount);
+}
+```
+</CodeGroup>
+
+---
+
+## GetTransactionInfo
+
+Returns full details for one or more transactions, looked up by their transaction IDs. This is useful for confirming the state of a specific withdrawal or deposit.
+
+<ParamField body="transaction_ids" type="array" required>
+  Array of transaction IDs (uint64) to look up. You may provide multiple IDs in one request.
+</ParamField>
+
+<ResponseField name="transactions" type="array">
+  Array of transaction detail objects.
+
+  <ResponseField name="transactions[].tx_id" type="string">
+    The transaction ID.
+  </ResponseField>
+  <ResponseField name="transactions[].source_address" type="string">
+    Address of the sender.
+  </ResponseField>
+  <ResponseField name="transactions[].dest_address" type="string">
+    Address of the recipient.
+  </ResponseField>
+  <ResponseField name="transactions[].status" type="int32">
+    Current transaction status code.
+  </ResponseField>
+  <ResponseField name="transactions[].amount" type="string">
+    Amount in microXTM.
+  </ResponseField>
+  <ResponseField name="transactions[].direction" type="int32">
+    `1` = Inbound, `2` = Outbound.
+  </ResponseField>
+  <ResponseField name="transactions[].fee" type="string">
+    Fee in microXTM.
+  </ResponseField>
+  <ResponseField name="transactions[].timestamp" type="int64">
+    Unix timestamp of the transaction.
+  </ResponseField>
+  <ResponseField name="transactions[].excess_sig" type="string">
+    Hex-encoded excess signature for the transaction.
+  </ResponseField>
+  <ResponseField name="transactions[].payment_id" type="string">
+    Hex-encoded Payment ID, if present.
+  </ResponseField>
+  <ResponseField name="transactions[].mined_in_block_height" type="uint64">
+    Block height where the transaction was mined. `0` if pending.
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+```bash grpcurl
+grpcurl -plaintext \
+  -d '{"transaction_ids": [1234567890]}' \
+  localhost:18143 tari.rpc.Wallet/GetTransactionInfo
+```
+
+```javascript Node.js
+const txDetails = await client.GetTransactionInfo({
+  transaction_ids: ['1234567890', '9876543210']
+});
+for (const tx of txDetails.transactions) {
+  console.log(`TX ${tx.tx_id}: ${tx.amount} µXTM, status: ${tx.status}`);
+}
+```
+</CodeGroup>
+
+---
+
+## StreamTransactionEvents
+
+A **server-streaming RPC** that delivers real-time transaction event notifications. The connection stays open and the wallet pushes events as they occur—no polling required. This is the recommended method for monitoring deposits and withdrawal confirmations in production.
+
+**Request**: No parameters required.
+
+<ResponseField name="event.type" type="string">
+  The type of event. Common values include `"Mined"`, `"Pending"`, `"Broadcast"`, `"Cancelled"`.
+</ResponseField>
+<ResponseField name="event.direction" type="string">
+  `"Inbound"` for incoming transactions (deposits), `"Outbound"` for outgoing (withdrawals).
+</ResponseField>
+<ResponseField name="event.transaction_id" type="string">
+  The transaction ID associated with this event.
+</ResponseField>
+<ResponseField name="event.source_address" type="string">
+  Address of the sender (for inbound events).
+</ResponseField>
+<ResponseField name="event.dest_address" type="string">
+  Address of the recipient (for outbound events).
+</ResponseField>
+<ResponseField name="event.amount" type="string">
+  Transaction amount in microXTM.
+</ResponseField>
+<ResponseField name="event.mined_in_block_height" type="uint64">
+  Block height where the transaction was mined (present on `"Mined"` events).
+</ResponseField>
+
+<CodeGroup>
+```bash grpcurl
+grpcurl -plaintext localhost:18143 tari.rpc.Wallet/StreamTransactionEvents
+```
+
+```javascript Node.js
+const eventStream = client.StreamTransactionEvents({});
+for await (const event of eventStream) {
+  if (event.type === 'Mined' && event.direction === 'Inbound') {
+    console.log('Deposit confirmed!');
+    console.log('  TX ID:', event.transaction_id);
+    console.log('  Amount (XTM):', event.amount / 1_000_000);
+    console.log('  Block height:', event.mined_in_block_height);
+    // Credit user account...
+  }
+}
+```
+</CodeGroup>
+
+---
+
+## GetPaymentByReference
+
+Retrieves detailed transaction information for a specific 32-byte Payment Reference (PayRef). Use this to verify a deposit by its PayRef after it has been confirmed on-chain.
+
+The `payment_reference` field is binary, not a hex string. Pass it as a `Uint8Array` or byte buffer.
+
+<Note>
+PayRefs are tied to the block in which the output was mined. If a chain reorganization occurs, the PayRef may change. Wait for a minimum of **6 block confirmations** before considering a PayRef permanently settled.
+</Note>
+
+<ParamField body="payment_reference" type="bytes" required>
+  Exactly 32 bytes identifying the payment reference. This is a binary field—pass as a `Uint8Array` or `Buffer`, not a hex string.
+</ParamField>
+
+<ResponseField name="transaction.tx_id" type="string">
+  The transaction ID.
+</ResponseField>
+<ResponseField name="transaction.source_address" type="string">
+  Sender's address.
+</ResponseField>
+<ResponseField name="transaction.dest_address" type="string">
+  Recipient's address.
+</ResponseField>
+<ResponseField name="transaction.status" type="int32">
+  Transaction status code.
+</ResponseField>
+<ResponseField name="transaction.amount" type="string">
+  Amount in microXTM.
+</ResponseField>
+<ResponseField name="transaction.direction" type="int32">
+  `1` = Inbound, `2` = Outbound.
+</ResponseField>
+<ResponseField name="transaction.fee" type="string">
+  Fee in microXTM.
+</ResponseField>
+<ResponseField name="transaction.excess_sig" type="string">
+  Hex-encoded excess signature.
+</ResponseField>
+<ResponseField name="transaction.mined_in_block_height" type="uint64">
+  Block height where the transaction was mined.
+</ResponseField>
+<ResponseField name="transaction.output_commitments" type="array">
+  Array of hex-encoded output commitments.
+</ResponseField>
+<ResponseField name="transaction.payment_references_received" type="array">
+  PayRefs for all received outputs in this transaction.
+</ResponseField>
+<ResponseField name="transaction.payment_references_sent" type="array">
+  PayRefs for all sent outputs in this transaction.
+</ResponseField>
+<ResponseField name="transaction.payment_references_change" type="array">
+  PayRefs for change outputs in this transaction.
+</ResponseField>
+
+<CodeGroup>
+```bash grpcurl
+PAYREF_B64=$(echo -n "<32-byte-payref>" | base64)
+grpcurl -plaintext \
+  -d "{\"payment_reference\": \"$PAYREF_B64\"}" \
+  localhost:18143 tari.rpc.Wallet/GetPaymentByReference
+```
+
+```javascript Node.js
+const payref = Buffer.from(
+  'a1b2c3d4e5f67890123456789012345678901234567890123456789012345678',
+  'hex'
+);
+client.getPaymentByReference({ payment_reference: payref }, (err, response) => {
+  if (err) {
+    console.error('Error:', err);
+  } else {
+    console.log('Transaction found:', response.transaction);
+  }
+});
+```
+</CodeGroup>
+
+---
+
+## GetTransactionPayRefs
+
+Returns all Payment References (PayRefs) associated with a given transaction ID. PayRefs are 32-byte identifiers derived from the output hash and the block hash in which the transaction was mined. This method includes PayRefs for sent, received, and change outputs.
+
+<Note>
+This method only accepts a single `transaction_id` per request. If the transaction has not yet been mined, the response will contain an empty `payment_references` array.
+</Note>
+
+<ParamField body="transaction_id" type="uint64" required>
+  The transaction ID to look up. Must be an unsigned 64-bit integer.
+</ParamField>
+
+<ResponseField name="payment_references" type="array">
+  Array of 32-byte hex-encoded PayRef strings for all outputs (sent, received, and change) associated with the transaction.
+</ResponseField>
+
+<CodeGroup>
+```bash grpcurl
+grpcurl -plaintext \
+  -d '{"transaction_id": 1234567890}' \
+  localhost:18143 tari.rpc.Wallet/GetTransactionPayRefs
+```
+
+```javascript Node.js
+const payRefs = await client.getTransactionPayRefs({
+  transaction_id: '1234567890'
+});
+console.log('PayRefs:', payRefs.payment_references);
+```
+</CodeGroup>
+
+**Example response:**
+
+```json
+{
+  "payment_references": [
+    "a1b2c3d4e5f6...1234567890abcdef",
+    "abcdef123456...7890abcdef123456",
+    "fedcba987654...0f1e2d3c4b5a6978"
+  ]
+}
+```
+
+If the transaction does not exist:
+
+```json
+{
+  "code": 5,
+  "message": "Transaction 1234567890 not found"
+}
+```
+
+If the transaction exists but has not yet been mined:
+
+```json
+{
+  "payment_references": []
+}
+```

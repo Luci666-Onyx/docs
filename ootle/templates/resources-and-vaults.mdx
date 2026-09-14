@@ -1,0 +1,384 @@
+---
+title: "Resources, Vaults, and Buckets in Ootle Templates"
+sidebarTitle: "Resources & Vaults"
+description: "Manage on-chain assets in Ootle templates using ResourceBuilder to mint tokens, Vaults to store them, and Buckets to transfer them."
+---
+
+On the Tari Ootle, assets are first-class objects with their own on-chain identity — not just numbers in a ledger. This guide explains how the three core asset primitives work together: **Resources** represent the asset type, **Vaults** store them persistently inside components, and **Buckets** move them temporarily during a transaction.
+
+## Resources
+
+A resource is a native Tari Ootle digital asset. Resources enforce ownership semantics that are guaranteed by the runtime: they cannot be copied, accidentally destroyed, or double-spent. You create a resource using `ResourceBuilder`, which returns a `ResourceAddress` — the permanent on-chain identifier for that asset type.
+
+There are four kinds of resource:
+
+| Type | Privacy | Use case |
+|------|---------|----------|
+| **Public Fungible** | Transparent amounts and addresses | ERC-20-style tokens, currencies |
+| **Public Non-Fungible** | Transparent metadata and ownership | NFTs, unique items |
+| **Confidential** | Hidden amounts, visible vault | Privacy tokens stored in component vaults |
+| **Stealth** | Hidden amounts and owner | Native TARI token; full UTXO privacy |
+
+### Creating Fungible Resources
+
+<CodeGroup>
+```rust Public Fungible Token
+use tari_template_lib::prelude::*;
+
+pub fn create_fungible_token() -> ResourceAddress {
+    ResourceBuilder::public_fungible()
+        .with_token_symbol("MFT")           // typically 3–5 characters
+        .metadata("url", "https://token.example")
+        .with_divisibility(10)              // decimal places (default: 8)
+        .initial_supply(Amount(1_000_000)) // mint 1,000,000 tokens immediately
+        .build()
+}
+```
+
+```rust Fungible Token with Access Rules
+use tari_template_lib::prelude::*;
+
+pub fn create_controlled_token(
+    minter_badge: NonFungibleAddress,
+) -> ResourceAddress {
+    ResourceBuilder::public_fungible()
+        .with_token_symbol("CTK")
+        // Only the minter badge holder can mint;
+        // the mint rule is locked forever (LOCKED).
+        .mintable(rule!(non_fungible(minter_badge)), LOCKED)
+        // Nobody can burn, and the rule cannot be changed.
+        .burnable(rule!(deny_all), LOCKED)
+        .build()
+}
+```
+</CodeGroup>
+
+### Creating Non-Fungible Resources (NFTs)
+
+<CodeGroup>
+```rust Simple NFT Resource
+use tari_template_lib::prelude::*;
+
+pub fn create_nft_resource() -> ResourceAddress {
+    ResourceBuilder::non_fungible()
+        .metadata("name", "My Awesome NFTs")
+        .with_token_symbol("MNFT")
+        .build()
+}
+```
+
+```rust NFT with Initial Supply
+use tari_template_lib::prelude::*;
+
+pub fn create_nft_with_supply() -> (ResourceAddress, Bucket) {
+    // initial_supply for NFTs returns a Bucket containing the minted tokens
+    let (resource_address, bucket) = ResourceBuilder::non_fungible()
+        .metadata("name", "Game Items")
+        .with_token_symbol("ITEM")
+        .initial_supply(vec![
+            (
+                NonFungibleId::from_string("sword-001"),
+                &metadata!["rarity" => "rare", "damage" => "50"],
+                &(), // empty mutable data
+            ),
+        ]);
+    (resource_address, bucket)
+}
+```
+
+```rust Minting NFTs After Creation
+use tari_template_lib::prelude::*;
+
+// If you created the resource with .build() (no initial supply),
+// mint later using the ResourceManager:
+pub fn mint_prize_nft(vault: &Vault, id: NonFungibleId, round: u32) -> Bucket {
+    let manager = vault.get_resource_manager();
+    manager.mint_non_fungible(
+        id,
+        &metadata!["round" => round.to_string()],
+        &(), // empty mutable data
+    )
+}
+```
+</CodeGroup>
+
+### Creating Stealth Resources
+
+Stealth resources use confidential UTXO substates instead of component vaults. The native TARI token is a stealth resource. You can create your own:
+
+<CodeGroup>
+```rust Stealth Resource
+use tari_template_lib::prelude::*;
+
+pub fn create_stealth_token() -> Bucket {
+    // initial_supply on a stealth resource returns a revealed Bucket
+    // that you must convert to stealth UTXOs via a stealth transfer.
+    ResourceBuilder::stealth()
+        .with_token_symbol("PRIV")
+        .with_divisibility(6)
+        .mintable(rule!(allow_all), LOCKED)
+        .initial_supply(Amount(1_000_000))
+}
+```
+</CodeGroup>
+
+<Note>
+  Stealth resources are advanced. Minting always returns a public `Bucket` which you then convert to confidential UTXOs via a `StealthTransferStatement`. See the [Stealth Resources guide](/ootle/templates/resources-and-vaults) for details.
+</Note>
+
+## Vaults
+
+A Vault is a persistent on-chain container that belongs to a component. Think of it as a safe embedded in your component that holds exactly one type of resource. You declare vaults as fields in your component struct, and they persist between transactions.
+
+**Key rules for vaults:**
+- A vault can only ever hold one resource type — attempting to deposit a different resource panics the transaction
+- Vaults returned from `Vault::new_empty` or `Vault::from_bucket` must be stored in a component before the transaction ends
+- To modify a vault's contents, the enclosing method must take `&mut self`
+
+<CodeGroup>
+```rust Creating Vaults
+use tari_template_lib::prelude::*;
+
+pub struct TokenVault {
+    // A vault is declared as a struct field and persisted on-chain.
+    tokens: Vault,
+    nfts: Vault,
+}
+
+impl TokenVault {
+    pub fn new(initial_supply: Amount) -> Component<Self> {
+        // Create a fungible token resource with an initial supply
+        let (token_address, token_bucket) = ResourceBuilder::public_fungible()
+            .with_token_symbol("TVT")
+            .initial_supply(initial_supply);
+
+        let nft_address = ResourceBuilder::non_fungible()
+            .with_token_symbol("TVNFT")
+            .build();
+
+        Component::new(Self {
+            // Vault::from_bucket — create a vault pre-loaded with tokens
+            tokens: Vault::from_bucket(token_bucket),
+            // Vault::new_empty — create an empty vault for a specific resource
+            nfts: Vault::new_empty(nft_address),
+        })
+        .create()
+    }
+}
+```
+
+```rust Using Vaults
+impl TokenVault {
+    /// Deposit tokens sent by the caller.
+    pub fn deposit_tokens(&mut self, bucket: Bucket) {
+        self.tokens.deposit(bucket);
+    }
+
+    /// Withdraw a specific amount of tokens.
+    pub fn withdraw_tokens(&mut self, amount: Amount) -> Bucket {
+        self.tokens.withdraw(amount)
+    }
+
+    /// Withdraw a specific NFT by its id.
+    pub fn withdraw_nft(&mut self, id: NonFungibleId) -> Bucket {
+        self.nfts.withdraw_non_fungible(id)
+    }
+
+    /// Check how many tokens are in the vault.
+    pub fn token_balance(&self) -> Amount {
+        self.tokens.balance()
+    }
+
+    /// Check how many NFTs are in the vault.
+    pub fn nft_count(&self) -> Amount {
+        self.nfts.balance()
+    }
+}
+```
+</CodeGroup>
+
+### Vault Method Reference
+
+| Method | Description |
+|--------|-------------|
+| `Vault::new_empty(resource_address)` | Create an empty vault typed to one resource |
+| `Vault::from_bucket(bucket)` | Create a vault pre-loaded with a bucket's contents |
+| `vault.deposit(bucket)` | Move all resources from a bucket into the vault |
+| `vault.withdraw(amount)` | Take `amount` tokens out as a new bucket |
+| `vault.withdraw_non_fungible(id)` | Take a specific NFT out as a new bucket |
+| `vault.balance()` | Return the current token count as `Amount` |
+| `vault.get_resource_manager()` | Get the `ResourceManager` for this vault's resource |
+| `vault.resource_address()` | Get the `ResourceAddress` of the resource this vault holds |
+
+## Buckets
+
+A Bucket is a temporary container used to move resources during a transaction. Unlike vaults, buckets do not persist on-chain — they exist only for the duration of a transaction's execution.
+
+**Key rules for buckets:**
+- Every bucket created during a transaction must be consumed before the transaction ends — by depositing it into a vault, passing it as a return value, or burning it
+- An unconsumed bucket at the end of a transaction causes the transaction to fail and roll back
+- A bucket holds exactly one resource type
+
+<CodeGroup>
+```rust Working with Buckets
+use tari_template_lib::prelude::*;
+
+impl MyComponent {
+    /// Accept a payment bucket and store it in the vault.
+    pub fn accept_payment(&mut self, payment: Bucket) {
+        // The bucket is consumed by depositing into the vault.
+        self.payment_vault.deposit(payment);
+    }
+
+    /// Withdraw and return tokens — the caller receives the bucket.
+    pub fn dispense(&mut self, amount: Amount) -> Bucket {
+        // The bucket is consumed by being returned to the caller.
+        self.tokens.withdraw(amount)
+    }
+
+    /// Burn tokens permanently.
+    pub fn burn_tokens(&mut self, amount: Amount) {
+        let bucket = self.tokens.withdraw(amount);
+        // Calling .burn() consumes the bucket.
+        bucket.burn();
+    }
+
+    /// Split a bucket: keep some, return the rest.
+    pub fn split_payment(&mut self, payment: Bucket, fee: Amount) -> Bucket {
+        // take() splits the bucket, consuming part and leaving the rest
+        let fee_bucket = payment.take(fee);
+        self.fee_vault.deposit(fee_bucket);
+        // Return the remainder to the caller
+        payment
+    }
+}
+```
+</CodeGroup>
+
+### Bucket Method Reference
+
+| Method | Description |
+|--------|-------------|
+| `bucket.deposit(other)` | Move all resources from `other` into this bucket |
+| `bucket.take(amount)` | Split: remove `amount` into a new bucket, leaving the rest |
+| `bucket.burn()` | Permanently destroy the bucket's contents |
+| `bucket.amount()` | Return the current token count |
+| `bucket.resource_address()` | Return the `ResourceAddress` of the contained resource |
+
+## ResourceAddress
+
+Every resource has a `ResourceAddress` — a permanent, unique on-chain identifier for that resource type. When you create a resource with `ResourceBuilder`, the address is returned from `.build()` (or included with the bucket when using `.initial_supply()`).
+
+You typically store the `ResourceAddress` in your component state so you can reference it later:
+
+<CodeGroup>
+```rust Storing a ResourceAddress
+pub struct MyComponent {
+    token_address: ResourceAddress,
+    token_vault: Vault,
+}
+
+impl MyComponent {
+    pub fn new() -> Component<Self> {
+        let (token_address, initial_bucket) = ResourceBuilder::public_fungible()
+            .with_token_symbol("MCT")
+            .initial_supply(Amount(1_000_000));
+
+        Component::new(Self {
+            token_address,
+            token_vault: Vault::from_bucket(initial_bucket),
+        })
+        .create()
+    }
+
+    /// Return the address so callers can identify the token.
+    pub fn token_address(&self) -> ResourceAddress {
+        self.token_address
+    }
+}
+```
+</CodeGroup>
+
+## Resource Operations Summary
+
+| Operation | Who controls it | Default access |
+|-----------|----------------|----------------|
+| **Mint** | `.mintable(rule, updater)` | `DenyAll`, locked |
+| **Burn** | `.burnable(rule, updater)` | `DenyAll`, locked |
+| **Withdraw** | `.withdrawable(rule, updater)` | `AllowAll`, locked |
+| **Deposit** | `.depositable(rule, updater)` | `AllowAll`, locked |
+| **Recall** | `.recallable(rule, updater)` | `DenyAll`, locked |
+| **Freeze** | `.freezable(rule, updater)` | `DenyAll`, locked |
+| **Update metadata** | `.update_metadata(rule, updater)` | `DenyAll`, owner updatable |
+| **Update NFT data** | `.update_non_fungible_data(rule, updater)` | `AllowAll`, owner updatable |
+
+Each method takes two arguments: an `AccessRule` that controls who can perform the action, and an `UpdateRule` that controls whether the rule itself can be changed later. Use `LOCKED` to permanently prevent a rule from ever changing — this is the strongest trust guarantee you can offer holders.
+
+## Minting and Burning Example
+
+<CodeGroup>
+```rust Full Mint/Burn Template
+use tari_template_lib::prelude::*;
+
+#[template]
+mod template {
+    use super::*;
+
+    pub struct MintBurnDemo {
+        tokens: Vault,
+    }
+
+    impl MintBurnDemo {
+        pub fn new(initial_supply: Amount) -> Component<Self> {
+            let bucket = ResourceBuilder::public_fungible()
+                .with_token_symbol("MBD")
+                .burnable(rule![allow_all], LOCKED)
+                .initial_supply(initial_supply);
+
+            Component::new(Self {
+                tokens: Vault::from_bucket(bucket),
+            })
+            .with_access_rules(ComponentAccessRules::new()
+                .method("burn_one", rule![allow_all])
+                .method("token_balance", rule![allow_all])
+                .default(rule![deny_all])
+            )
+            .create()
+        }
+
+        /// Anyone can burn exactly 1 token.
+        pub fn burn_one(&mut self) {
+            let bucket = self.tokens.withdraw(Amount::from(1u64));
+            bucket.burn();
+        }
+
+        /// Owner can mint additional tokens.
+        pub fn mint_more(&mut self, amount: Amount) {
+            let bucket = self.tokens.get_resource_manager().mint(amount);
+            self.tokens.deposit(bucket);
+        }
+
+        pub fn token_balance(&self) -> Amount {
+            self.tokens.balance()
+        }
+    }
+}
+```
+</CodeGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Access Control" icon="lock" href="/ootle/templates/access-control">
+    Restrict who can call mint, withdraw, and other sensitive methods.
+  </Card>
+  <Card title="Build a Template" icon="hammer" href="/ootle/templates/build-a-template">
+    See Vaults and Buckets in action in the guessing game walkthrough.
+  </Card>
+  <Card title="Testing" icon="flask" href="/ootle/templates/testing">
+    Test resource operations with the TemplateTest harness.
+  </Card>
+  <Card title="API Overview" icon="book" href="/ootle/reference/api-overview">
+    Full reference for ResourceBuilder, Vault, and Bucket APIs.
+  </Card>
+</CardGroup>

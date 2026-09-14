@@ -1,0 +1,288 @@
+---
+title: "Ootle Type Reference: Amounts, Addresses, and Keys"
+sidebarTitle: "Types"
+description: "Reference for fundamental Ootle on-chain types: Amount, ResourceAddress, ComponentAddress, VaultId, TemplateAddress, and AccessRule."
+---
+
+The fundamental on-chain types for Ootle development come from the `tari_template_lib_types` crate, which is re-exported in full through `tari_template_lib::prelude::*`. You rarely need to import it directly — the prelude wildcard brings everything you need into scope.
+
+```rust
+use tari_template_lib::prelude::*;
+// Includes: Amount, ResourceAddress, ComponentAddress, TemplateAddress,
+//           VaultId, NonFungibleId, Vault, Bucket, ResourceBuilder,
+//           ComponentBuilder, AccessRules, AccessRule, Metadata, and more.
+```
+
+For the complete API surface, see the [crates.io documentation](https://docs.rs/tari_template_lib/latest/tari_template_lib/).
+
+## Type Reference
+
+| Name | Module | Description |
+|------|--------|-------------|
+| `Amount` | `types` | Token quantity — a `u64` wrapper with arithmetic operators |
+| `ResourceAddress` | `types` | Permanent on-chain address of a resource type |
+| `ComponentAddress` | `types` | On-chain address of a deployed component instance |
+| `TemplateAddress` | `types` | On-chain address of a published template (the code, not an instance) |
+| `VaultId` | `types` | Unique identifier for a `Vault` within a component |
+| `NonFungibleId` | `types` | Unique identifier for a single NFT within a non-fungible resource |
+| `AccessRule` | `types` | `AllowAll`, `DenyAll`, or `Restricted(...)` — one authorization rule |
+| `Metadata` | `types` | Key-value map for attaching metadata to resources and components |
+| `Hash` | `types` | Generic 32-byte cryptographic hash |
+| `SubstateAddress` | `types` | The on-chain address of any substate (component, resource, vault, etc.) |
+| `RistrettoPublicKeyBytes` | `types` | A caller's public key — returned by `CallerContext::transaction_signer_public_key()` |
+
+---
+
+## Quantity: `Amount`
+
+`Amount` represents a quantity of a fungible resource. It wraps a `u64` and supports the standard arithmetic operators (`+`, `-`, `*`, `/`). All token balances, transfer amounts, and initial supplies use `Amount`.
+
+<CodeGroup>
+```rust Amount Examples
+use tari_template_lib::prelude::*;
+
+// Construct directly
+let supply = Amount(1_000_000);
+let fee    = Amount(500);
+
+// Arithmetic
+let total = Amount(100) + Amount(50); // Amount(150)
+let half  = Amount(200) / Amount(2);  // Amount(100)
+
+// Use the amount![] macro for large or decimal values
+let large = amount!["1_000_000_000_000_000_000"];
+
+// Comparisons
+assert!(Amount(100) > Amount(50));
+assert!(Amount(0).is_zero());
+assert!(Amount(100).is_positive());
+
+// Convert from common integer types
+let a: Amount = 42u64.into();
+let b = Amount::from(42u64);
+```
+</CodeGroup>
+
+`Amount` is used everywhere a fungible token quantity is needed: `vault.withdraw(amount)`, `ResourceBuilder::initial_supply(amount)`, `vault.balance()`, and so on.
+
+---
+
+## Asset Identity: `ResourceAddress`
+
+A `ResourceAddress` is the permanent, globally unique on-chain address of a resource type — whether that's a fungible token, an NFT collection, or a stealth resource. You receive a `ResourceAddress` from `ResourceBuilder::build()` or alongside the `Bucket` from `initial_supply()`.
+
+Store the `ResourceAddress` in your component state to reference your token later — for example, to type-check a deposit or to mint additional tokens.
+
+<CodeGroup>
+```rust ResourceAddress Examples
+use tari_template_lib::prelude::*;
+
+pub struct MyComponent {
+    // Persist the address so we can reference the token later
+    token_address: ResourceAddress,
+    token_vault: Vault,
+}
+
+impl MyComponent {
+    pub fn new() -> Component<Self> {
+        let (token_address, token_bucket) = ResourceBuilder::public_fungible()
+            .with_token_symbol("MTK")
+            .initial_supply(Amount(1_000_000));
+
+        Component::new(Self {
+            token_address,
+            token_vault: Vault::from_bucket(token_bucket),
+        })
+        .create()
+    }
+
+    pub fn token_address(&self) -> ResourceAddress {
+        self.token_address
+    }
+}
+```
+</CodeGroup>
+
+---
+
+## Component Identity: `ComponentAddress`
+
+A `ComponentAddress` is the globally unique on-chain address of a deployed component instance. You receive one when a constructor returns `Component<T>`. Pass a `ComponentAddress` to `ComponentManager::get(addr)` to call methods on another component.
+
+<CodeGroup>
+```rust ComponentAddress Examples
+use tari_template_lib::prelude::*;
+
+pub struct Relay {
+    target: ComponentAddress,
+}
+
+impl Relay {
+    pub fn forward_deposit(&self, bucket: Bucket) {
+        // Call `deposit` on the target component
+        ComponentManager::get(self.target)
+            .invoke("deposit", args![bucket]);
+    }
+
+    pub fn get_target(&self) -> ComponentAddress {
+        self.target
+    }
+}
+```
+</CodeGroup>
+
+---
+
+## Template Identity: `TemplateAddress`
+
+A `TemplateAddress` is the on-chain address of a *published template* — the code definition, not any particular component instance. You receive a `TemplateAddress` after a successful `tari publish` command. Callers use it with `CallFunction` to invoke a template's constructors and static functions.
+
+```rust
+// TemplateAddress is typically passed in from outside (e.g. as a constructor argument)
+// rather than constructed inside a template.
+pub struct Factory {
+    target_template: TemplateAddress,
+}
+```
+
+---
+
+## Vault Identity: `VaultId`
+
+A `VaultId` uniquely identifies a specific `Vault` within a component. You generally don't work with `VaultId` directly — it is used internally by the runtime and by state inspection tools like `test.read_only_state_store().get_vault(id)`.
+
+---
+
+## NFT Identity: `NonFungibleId`
+
+A `NonFungibleId` uniquely identifies a single token within a non-fungible resource. You use it when minting specific NFTs, withdrawing a specific NFT from a vault, or looking up an NFT's metadata.
+
+<CodeGroup>
+```rust NonFungibleId Examples
+use tari_template_lib::prelude::*;
+
+// Create from a string
+let id = NonFungibleId::from_string("sword-001");
+
+// Create from a u64 (common for auto-incrementing IDs)
+let id = NonFungibleId::from_u64(42);
+
+// Withdraw a specific NFT from a vault
+let bucket = self.nft_vault.withdraw_non_fungible(id);
+
+// Mint a specific NFT
+let manager = self.nft_vault.get_resource_manager();
+let bucket = manager.mint_non_fungible(
+    NonFungibleId::from_string("prize-round-3"),
+    &metadata!["round" => "3"],
+    &(), // mutable data
+);
+```
+</CodeGroup>
+
+---
+
+## Authorization: `AccessRule`
+
+`AccessRule` defines who is allowed (or denied) to perform an action — calling a component method, minting a resource, withdrawing from a vault, and so on.
+
+<CodeGroup>
+```rust AccessRule Variants
+use tari_template_lib::prelude::*;
+
+// Allow anyone
+let public = rule![allow_all];
+
+// Deny everyone (not even the owner)
+let locked = rule![deny_all];
+
+// Require the caller to hold a specific resource (badge)
+let badge_gated = rule![require(admin_badge_address)];
+
+// Require a specific non-fungible token
+let nft_gated = rule![non_fungible(specific_nft_address)];
+
+// Require any of several resources
+let any_of = rule![require(any_of(badge_a, badge_b))];
+
+// Require multiple signers (m-of-n multisig)
+let multisig = rule![m_of_n(2, public_key(pk1), public_key(pk2), public_key(pk3))];
+```
+</CodeGroup>
+
+`AccessRule` is used in both `ComponentAccessRules` (per-method rules on components) and in `ResourceBuilder` methods (`.mintable(rule, updater)`, `.burnable(rule, updater)`, etc.).
+
+---
+
+## Metadata: `Metadata`
+
+`Metadata` is a key-value map (`HashMap<String, String>`) for attaching descriptive data to resources and components. Use the `metadata![]` macro for concise construction.
+
+<CodeGroup>
+```rust Metadata Examples
+use tari_template_lib::prelude::*;
+
+// Construct with the macro
+let meta = metadata![
+    "name"        => "My Token",
+    "description" => "A demo token",
+    "url"         => "https://example.com",
+];
+
+// Attach to a resource
+let addr = ResourceBuilder::public_fungible()
+    .with_token_symbol("DMO")
+    .metadata("name", "Demo Token")
+    .metadata("url", "https://example.com")
+    .build();
+
+// Use in an NFT mint
+manager.mint_non_fungible(
+    NonFungibleId::from_string("item-001"),
+    &metadata!["rarity" => "epic", "power" => "9000"],
+    &(),
+);
+```
+</CodeGroup>
+
+---
+
+## Common Imports Quick Reference
+
+<CodeGroup>
+```rust Full Prelude Import
+use tari_template_lib::prelude::*;
+// Brings in everything below and more:
+// Amount, ResourceAddress, ComponentAddress, TemplateAddress,
+// VaultId, NonFungibleId, Vault, Bucket, ResourceManager,
+// ResourceBuilder, Component, ComponentAccessRules, ComponentManager,
+// AccessRule, UpdateRule, OwnerRule, Metadata,
+// CallerContext, Consensus, RistrettoPublicKeyBytes,
+// emit_event!, info!, warn!, error!, args!, metadata!, rule!, amount!
+```
+
+```rust Selective Imports (if needed)
+// You can also import specific items from their modules:
+use tari_template_lib::types::{Amount, ResourceAddress, ComponentAddress};
+use tari_template_lib::models::{Vault, Bucket};
+use tari_template_lib::resource::ResourceBuilder;
+use tari_template_lib::component::Component;
+```
+</CodeGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Overview" icon="book" href="/ootle/reference/api-overview">
+    High-level map of all tari_template_lib modules and key structs.
+  </Card>
+  <Card title="Template Overview" icon="code" href="/ootle/templates/overview">
+    Learn how to use these types in a complete template.
+  </Card>
+  <Card title="Access Control" icon="lock" href="/ootle/templates/access-control">
+    Deep dive into AccessRule and ComponentAccessRules.
+  </Card>
+  <Card title="Resources & Vaults" icon="box" href="/ootle/templates/resources-and-vaults">
+    See Amount, ResourceAddress, and Vault in action.
+  </Card>
+</CardGroup>

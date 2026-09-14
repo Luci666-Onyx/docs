@@ -1,27 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "Tari",
+  "projectType": "saas",
+  "projectName": "Tari",
+  "projectDescription": "Tari is a two-layer blockchain protocol — Layer 1 (Minotari) secured by proof-of-work mining and Layer 2 (the Ootle) for smart contracts and decentralized applications — with Tari Universe as the consumer mining app and XTM as the native token.",
   "theme": "luma",
-  "favicon": "/favicon.svg",
-  "colors": {
-    "primary": "#932fff",
-    "light": "#ffffff",
-    "dark": "#343434"
-  },
-  "fonts": {
-    "heading": {
-      "family": "Open Sans"
-    },
-    "body": {
-      "family": "Open Sans"
-    }
-  },
-  "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/tari-project/tari"
-    }
-  },
+  "primaryColor": "#932fff",
+  "lightColor": "#ffffff",
+  "darkColor": "#343434",
   "navigation": {
     "tabs": [
       {
@@ -129,11 +113,30 @@
       }
     ]
   },
-  "footer": {
-    "socials": {
-      "github": "https://github.com/tari-project/tari",
-      "discord": "https://discord.gg/tari",
-      "x": "https://twitter.com/tari"
-    }
-  }
+  "keyFeatures": [
+    "Tari Universe: consumer-grade desktop mining app for Mac, Windows, and Linux",
+    "Minotari (XTM): proof-of-work Layer 1 blockchain with four mining algorithms (RandomX, SHA3x, Cuckaroo)",
+    "Merge-mining with Monero via RandomX",
+    "Ootle: Layer 2 smart-contract network powered by WASM templates",
+    "Turbine Model: burn XTM 1:1 to mint TARI tokens on L2",
+    "Emoji ID: human-friendly wallet address format built on Mimblewimble privacy",
+    "One-sided transactions: send XTM without the recipient being online",
+    "gRPC API for wallet and base node integration",
+    "Tari Ootle Wallet Daemon for L2 interaction",
+    "Payment ID / PayRef system for exchange deposit tracking",
+    "21 billion XTM total supply with tail emission"
+  ],
+  "publicApiSurface": [
+    "minotari_node (binary) — full node with gRPC on port 18142",
+    "minotari_console_wallet (binary) — terminal wallet with gRPC on port 18143",
+    "minotari_miner (binary) — standalone SHA-3 miner",
+    "minotari_merge_mining_proxy (binary) — Monero merge-mining proxy",
+    "minotari_offline_signer (binary) — air-gapped transaction signer",
+    "tari_ootle_walletd (binary) — L2 wallet daemon",
+    "tari CLI — create, build, and publish Ootle templates",
+    "Wallet gRPC: GetBalance, GetAddress, GetCompleteAddress, GetPaymentIdAddress, Transfer, GetCompletedTransactions, StreamTransactionEvents, GetPaymentByReference",
+    "Base Node gRPC: GetTipInfo, GetSyncInfo, GetSyncProgress, GetVersion, Identify, ListConnectedPeers, SearchPaymentReferences",
+    "tari_template_lib — Rust library for writing Ootle smart contract templates",
+    "ResourceBuilder, ComponentBuilder, Vault, Bucket, AccessRules — core L2 template primitives"
+  ]
 }

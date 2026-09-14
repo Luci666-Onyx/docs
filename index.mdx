@@ -1,20 +1,62 @@
 ---
-title: "Introduction"
-description: "Welcome to your project"
+title: "Tari: The Privacy-First Blockchain for Builders and Miners"
+sidebarTitle: "Home"
+description: "Tari is a two-layer blockchain protocol. Mine XTM on Layer 1 with Tari Universe, or build smart contracts on the Ootle Layer 2 network."
 ---
 
-Write a short description of your product here. What it does, who it's for, and what they can accomplish with it.
+Tari is an open-source, privacy-first blockchain built for both everyday users and developers. Layer 1 (Minotari) is secured by proof-of-work mining and rewards you with XTM tokens. Layer 2 (the Ootle) is a high-performance smart-contract network where you can build and deploy decentralized applications using Rust-based templates.
 
-<Tip>
-  Ready to make this your own? Start by editing this page. Update your `docs.json` file to customize your site. Then fill out the [Quickstart](/quickstart) page.
-</Tip>
+<CardGroup cols={2}>
+  <Card title="Start Mining" icon="pickaxe" href="/universe/overview">
+    Download Tari Universe and start earning XTM on your Mac or PC in minutes.
+  </Card>
+  <Card title="How Tari Works" icon="circle-info" href="/how-tari-works">
+    Understand Tari's two-layer architecture, Emoji IDs, and the Turbine Model.
+  </Card>
+  <Card title="Exchange Integration" icon="building-columns" href="/exchange/overview">
+    Integrate Minotari (XTM) into your exchange with gRPC APIs and full deposit/withdrawal support.
+  </Card>
+  <Card title="Build on the Ootle" icon="code" href="/ootle/overview">
+    Write and publish Rust-based smart contract templates on Tari's Layer 2 network.
+  </Card>
+</CardGroup>
 
-<Card title="Quickstart" icon="rocket" href="/quickstart">
-  This card links to the quickstart page in your project.
-</Card>
-<Card title="Components" icon="puzzle-piece" href="https://mintlify.com/docs/components">
-  Add cards, callouts, steps, tabs, and more to design and structure your pages.
-</Card>
-<Card title="Settings" icon="gear" href="https://mintlify.com/docs/organize/settings">
-  Set your site name, branding, and navigation in the `docs.json` file.
-</Card>
+## Where Do You Want to Go?
+
+<CardGroup cols={3}>
+  <Card title="Tari Universe" icon="desktop" href="/universe/overview">
+    The beautifully simple desktop mining app for Mac and Windows.
+  </Card>
+  <Card title="Run a Node" icon="server" href="/node/overview">
+    Set up a Minotari base node to participate in the network.
+  </Card>
+  <Card title="Tokenomics" icon="coins" href="/tokenomics">
+    Learn about XTM supply, emission curve, and token distribution.
+  </Card>
+  <Card title="Node gRPC API" icon="plug" href="/exchange/api/node-grpc">
+    Query blockchain data and manage node state via gRPC.
+  </Card>
+  <Card title="Wallet gRPC API" icon="wallet" href="/exchange/api/wallet-grpc">
+    Send, receive, and monitor XTM transactions programmatically.
+  </Card>
+  <Card title="Ootle Templates" icon="file-code" href="/ootle/templates/overview">
+    Build on-chain applications using the tari_template_lib SDK.
+  </Card>
+</CardGroup>
+
+## Quick Start Paths
+
+<Steps>
+  <Step title="Mine XTM with Tari Universe">
+    [Download Tari Universe](https://tari.com/downloads) for Mac or Windows, install it, and start mining immediately. No cryptocurrency knowledge required.
+  </Step>
+  <Step title="Run a Base Node">
+    Download `minotari_node` from [tari.com/downloads](https://tari.com/downloads), run it, and sync to the Tari network. See the [installation guide](/node/installation) for full instructions.
+  </Step>
+  <Step title="Integrate XTM into Your Exchange">
+    Follow the [Exchange Integration guide](/exchange/overview) to set up a Minotari node, configure wallets, and use the gRPC API to monitor deposits and process withdrawals.
+  </Step>
+  <Step title="Build on the Ootle">
+    Install Rust, run `cargo install tari-ootle-cli`, and follow the [Getting Started guide](/ootle/getting-started) to write and publish your first smart contract template.
+  </Step>
+</Steps>

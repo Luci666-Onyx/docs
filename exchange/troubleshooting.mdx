@@ -1,0 +1,162 @@
+---
+title: "Troubleshoot Common Minotari Exchange Integration Issues"
+sidebarTitle: "Troubleshooting"
+description: "Diagnose and fix sync issues, connectivity problems, transaction failures, and performance bottlenecks in your Minotari exchange setup."
+---
+
+Most problems with a Minotari exchange integration fall into four categories: the node or wallet is not syncing, the gRPC connection cannot be established, transactions are stuck or missing, or the system is consuming too many resources. This page walks through the symptoms, diagnosis commands, and fixes for each category. Run the complete diagnostic script at the bottom of this page first — it gives you a snapshot of all services in one pass.
+
+<Accordion title="Sync Issues">
+
+**Symptoms:** Your base node is stuck at the same block height, the sync percentage is not advancing, or `GetSyncProgress` reports the same values across multiple calls several minutes apart.
+
+**Diagnose:**
+
+```bash
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetSyncInfo
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetTipInfo
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/ListConnectedPeers
+```
+
+Check the output of `ListConnectedPeers` — if fewer than three peers are returned, your node is likely isolated from the network and cannot receive new blocks. `GetTipInfo` tells you your local best block height; compare it to the current mainnet height from a block explorer to see how far behind you are.
+
+**Fixes:**
+
+1. **Restart services.** A clean restart resolves the majority of stalled-sync cases:
+   ```bash
+   docker-compose restart tari-node tari-wallet
+   ```
+
+2. **Clear the peer ban list.** If your node has banned peers it shouldn't have, it may have no valid connections left:
+   ```bash
+   rm ~/.tari/mainnet/peer_db/banned_peers
+   ```
+   Then restart the node service.
+
+3. **Manually add peers.** Use the `SetBaseNode` RPC call to point your wallet at a known-good node, or add seed peers directly to your `config.toml` under `[base_node.p2p.seeds]`.
+
+</Accordion>
+
+<Accordion title="Connectivity Issues">
+
+**Symptoms:** Your application receives a `connection refused` error when calling any gRPC method, the wallet reports it cannot reach the base node, or `grpcurl` times out immediately.
+
+**Check gRPC configuration:**
+
+Open your `config.toml` for both the node and wallet and confirm the following are set and not commented out:
+
+```toml
+# Base node
+grpc_enabled = true
+grpc_address = "127.0.0.1:18142"
+
+# Console wallet
+grpc_enabled = true
+grpc_address = "127.0.0.1:18143"
+```
+
+The gRPC address must match the host and port your application is connecting to. If you have changed the default ports, update both the config and your application's connection string.
+
+**Check port accessibility:**
+
+Verify that ports 18141 (P2P), 18142 (base node gRPC), and 18143 (wallet gRPC) are reachable from the machine running your application:
+
+```bash
+# From the application host
+nc -zv <node-host> 18142
+nc -zv <wallet-host> 18143
+```
+
+If the connection is refused, check your firewall rules. The gRPC ports should only be reachable from trusted internal hosts — never expose them to the public internet.
+
+**Windows — Tor dependency:**
+
+On Windows, the Tari node uses Tor for its P2P transport by default. If the Tor daemon is not running before you start the node, the node will fail to connect to peers and gRPC may not initialise correctly. Start the Tor service first, then start `minotari_node.exe`.
+
+</Accordion>
+
+<Accordion title="Transaction Issues">
+
+**Symptoms:** Expected deposits are not appearing in `GetCompletedTransactions`, your streaming consumer is receiving no events, or transactions are showing `BROADCAST` status and never advancing to `CONFIRMED`.
+
+**Verify wallet sync:**
+
+A wallet that has not fully scanned the blockchain will not see transactions that arrived before its scan height. Check the wallet's current scan position:
+
+```bash
+grpcurl -plaintext localhost:18143 tari.rpc.Wallet/GetState
+```
+
+Look at `scanned_height` in the response and compare it to the current block height from `GetTipInfo` on the base node. If `scanned_height` is significantly behind, wait for the wallet to catch up — deposits that arrived in blocks above `scanned_height` will appear once scanning reaches those blocks.
+
+**Verify Payment ID embedding:**
+
+If your deposit address was generated correctly but the transaction is not matching any deposit record, confirm that the Payment ID was embedded at address generation time using `GetPaymentIdAddress` — not by post-processing the address. The Payment ID is encrypted into the address bytes by the wallet; it cannot be appended after the fact. Re-generate the address if there is any doubt.
+
+**Check transaction confirmation status:**
+
+Only credit user accounts for transactions with status `CONFIRMED`. A transaction at `BROADCAST` status has been submitted to the network but is not yet in a block. This is expected — blocks are produced approximately every two minutes on Tari mainnet. Do not credit `BROADCAST` transactions.
+
+If a transaction has been `BROADCAST` for more than 30 minutes without confirming, check whether your node is fully synced and has active peer connections using the sync diagnostics above.
+
+</Accordion>
+
+<Accordion title="Performance Issues">
+
+**Symptoms:** The node or wallet process is consuming an unexpectedly high amount of CPU or RAM, sync is progressing slower than expected, or gRPC calls are taking several seconds to respond.
+
+**High CPU/memory usage:**
+
+The most common cause is too many active peer connections. Each connection consumes resources for protocol negotiation, data exchange, and validation. Reduce the maximum peer count in your `config.toml`:
+
+```toml
+[base_node.p2p]
+max_simultaneous_outbound_dials = 8
+max_connections = 20
+```
+
+Restart the node after making this change. A well-connected node typically needs only 8–15 peers to sync and remain current.
+
+**Slow initial sync:**
+
+Initial block download is I/O-bound. If you are running on a spinning hard disk (HDD), the random-access pattern of UTXO lookups will bottleneck sync severely. Move your `~/.tari` data directory to an SSD with at least 50 GB of free space. Also ensure the machine has at least 4 GB of RAM — insufficient RAM causes excessive swapping that compounds I/O latency.
+
+**High gRPC response latency:**
+
+If your application and the node/wallet are on separate machines connected over a network, round-trip time adds up when your application makes many sequential gRPC calls. Where possible, co-locate your exchange application on the same machine as the node and wallet so that gRPC calls use the loopback interface. If co-location is not possible, use connection pooling in your gRPC client rather than opening a new connection per call.
+
+</Accordion>
+
+## Complete Diagnostic Script
+
+Run this script to capture the state of all services in a single output. Paste the result when asking for help in the community channels.
+
+```bash
+#!/bin/bash
+echo "=== Tari Node Diagnostic ==="
+
+echo "1. Node Version:"
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetVersion
+
+echo "2. Tip Info:"
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetTipInfo | head -20
+
+echo "3. Sync Progress:"
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetSyncProgress
+
+echo "4. Peers:"
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/ListConnectedPeers | grep public_key | wc -l
+
+echo "5. Wallet State:"
+grpcurl -plaintext localhost:18143 tari.rpc.Wallet/GetState
+```
+
+Save this as `tari-diagnostic.sh`, make it executable with `chmod +x tari-diagnostic.sh`, and run it from any host that has network access to your node and wallet gRPC ports.
+
+## Getting Help
+
+If you have worked through the diagnostics above and the issue persists, the following resources are available:
+
+- **Discord** — Join the Tari community at [discord.gg/tari](https://discord.gg/tari) and post in the `#exchange-integration` or `#dev-support` channels. Include the output of the diagnostic script above.
+- **GitHub Issues** — File a bug or ask a question at [github.com/tari-project/tari](https://github.com/tari-project/tari). Search existing issues first — your problem may already have a tracked solution.
+- **Protocol Documentation** — The Tari RFC repository at [rfc.tari.com](https://rfc.tari.com) contains detailed specifications for address formats, transaction types, and consensus rules. RFC-0155 covers the Tari address structure including Payment ID encoding.

@@ -1,0 +1,288 @@
+---
+title: "Tari Ootle CLI: Create, Build, and Publish Templates"
+sidebarTitle: "CLI Reference"
+description: "Use the tari CLI to scaffold template projects, add new templates to a workspace, build WASM binaries, and publish to the Ootle network."
+---
+
+The Tari Ootle CLI (`tari`) is a developer tool that manages the full lifecycle of your Ootle template projects — from scaffolding a new workspace to publishing compiled WASM to the network. This guide covers installation, all available commands, and configuration options.
+
+## Installation
+
+Install the CLI using Cargo, the Rust package manager:
+
+```bash
+cargo install tari-ootle-cli
+```
+
+<Tip>
+  This installs a binary called `tari`. All CLI commands below use the `tari` command. Verify the installation worked by running `tari --version`.
+</Tip>
+
+## Usage Overview
+
+```
+Usage: tari [OPTIONS] <COMMAND>
+
+Commands:
+  create   Creates a new workspace for your Tari template project
+  add      Generates and adds a new Tari wasm template crate
+  publish  Publishing a Tari template to a network
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+  -b, --base-dir <PATH>              Base directory for CLI data
+                                     [default: ~/.local/share/tari_cli]
+  -c, --config-file-path <PATH>      Config file location
+                                     [default: ~/.config/tari_cli/tari.config.toml]
+  -e, --config-overrides <KEY=VALUE> Config file overrides (repeatable)
+  -h, --help                         Print help
+  -V, --version                      Print version
+```
+
+## `tari create` — Create a New Template Workspace
+
+The `create` command scaffolds a new template workspace with the correct directory structure, `Cargo.toml` dependencies, and a starter template.
+
+```bash
+tari create <WORKSPACE_NAME>
+```
+
+The CLI prompts you to choose a template type:
+
+- **basic** — a simple template with a constructor and a method; good starting point for most projects
+- **empty** — a minimal template with no logic; useful if you want a clean slate
+
+<CodeGroup>
+```bash Create a Basic Workspace
+# Create a new workspace called "my_project"
+tari create my_project
+
+# The CLI will prompt:
+# ? Select a template type:
+#   > basic
+#     empty
+```
+
+```bash Resulting Directory Structure
+my_project/
+├── Cargo.toml          ← workspace Cargo manifest
+└── templates/
+    └── my_project/
+        ├── Cargo.toml  ← template crate dependencies
+        ├── src/
+        │   └── lib.rs  ← your template source
+        └── tests/
+            └── test.rs ← unit tests
+```
+</CodeGroup>
+
+## `tari add` — Add a Template to an Existing Workspace
+
+The `add` command generates a new template crate and adds it to an existing workspace. Run it from inside the workspace directory.
+
+```bash
+cd my_project
+tari add <TEMPLATE_NAME>
+```
+
+<CodeGroup>
+```bash Add a Template
+# Navigate into your workspace first
+cd my_project
+
+# Add a new template called "hello_world"
+tari add hello_world
+
+# Choose "empty" when prompted for template type
+```
+
+```rust Generated Template (src/lib.rs)
+use tari_template_lib::prelude::*;
+
+#[template]
+mod hello_world {
+    use super::*;
+
+    pub struct HelloWorld {
+        name: String,
+    }
+
+    impl HelloWorld {
+        pub fn new(
+            alloc: ComponentAddressAllocation,
+            name: String,
+        ) -> Component<Self> {
+            Component::new(Self { name })
+                .with_address_allocation(alloc)
+                .create()
+        }
+
+        pub fn greet(&self) {
+            #[cfg(not(test))]
+            info!("Hello {}", self.name);
+        }
+    }
+}
+```
+</CodeGroup>
+
+<Note>
+  The generated constructor includes a `ComponentAddressAllocation` argument. This is optional but recommended — it lets callers both instantiate the component and call it in a single transaction without knowing the address ahead of time.
+</Note>
+
+## Writing and Testing Your Template
+
+After adding a template, open `src/lib.rs` and implement your logic. Update the test in `tests/test.rs` to exercise it:
+
+<CodeGroup>
+```rust tests/test.rs
+use tari_template_test_tooling::{
+    TemplateTest,
+    transaction::{args, Transaction},
+};
+
+#[test]
+fn it_works() {
+    let mut test = TemplateTest::new(".", ["."]);
+
+    let template = test.get_template_address("HelloWorld");
+
+    test.execute_expect_success(
+        Transaction::builder_localnet()
+            .allocate_component_address("hello_world_component")
+            .call_function(
+                template,
+                "new",
+                args![Workspace("hello_world_component"), "Alice"],
+            )
+            .call_method("hello_world_component", "greet", args![])
+            .build_and_seal(test.secret_key()),
+        vec![test.owner_proof()],
+    );
+}
+```
+
+```bash Run Tests
+cargo test
+```
+</CodeGroup>
+
+## `tari publish` — Publish a Template to the Network
+
+The `publish` command builds your template, estimates the fee, and publishes the compiled WASM to the configured network using your wallet daemon.
+
+```bash
+# Publish from the workspace root
+tari publish <TEMPLATE_NAME>
+
+# Or publish all templates in the workspace
+tari publish
+```
+
+<CodeGroup>
+```bash Publish to Testnet
+# Override the network to the Esmeralda testnet
+tari publish hello_world -e network=esme
+```
+
+```bash Publish with Explicit Wallet Address
+# Specify where your wallet daemon is running
+tari publish hello_world -e wallet_address=http://127.0.0.1:5100
+```
+
+```bash Example Publish Output
+✅ Init configuration and directories
+✅ Refresh project templates repository
+✅ Refresh wasm templates repository
+✅ Building WASM template project hello_world
+🔗 Connected to wallet version 0.20.0 (network: localnet)
+❓ No Account specified. Using default account: component_bb20db18...
+✅ WASM size: 148 KiB
+⚠️  Publishing this template costs 67599 micro-TTARI, are you sure? yes
+✅ Publishing template. This may take a while...
+⭐ Your new template's address: 3bba17783b1c1a3c76d1a70cfac1bb159352b5b1...
+```
+</CodeGroup>
+
+<Warning>
+  You need a wallet daemon running with a funded default account before you can publish. See [Wallet Setup](/ootle/publishing#prerequisites) for instructions. The CLI only supports publishing via a wallet daemon JSON-RPC endpoint.
+</Warning>
+
+After a successful publish you receive a **Template Address** — the permanent on-chain address of your template code. Keep this address; you'll need it to instantiate components.
+
+## Building Templates Manually
+
+If you prefer to build without the CLI, use Cargo directly with the `wasm32-unknown-unknown` target:
+
+<CodeGroup>
+```bash Manual WASM Build
+cargo build --target wasm32-unknown-unknown --release
+
+# Output location:
+# target/wasm32-unknown-unknown/release/<template_name>.wasm
+```
+
+```bash Check WASM Size
+ls -lh target/wasm32-unknown-unknown/release/*.wasm
+# Templates must be under 1.5 MiB.
+# The publish fee rises steeply above 96 KiB, so keep your binary small.
+```
+</CodeGroup>
+
+<Tip>
+  The wallet daemon automatically runs `wasm-opt` over your binary before estimating the fee or publishing, so you don't need to optimize it yourself. See the [Reducing Template Size](/ootle/reference/api-overview) guide for tips on cutting binary size.
+</Tip>
+
+## Configuration
+
+The CLI reads from a TOML config file at `~/.config/tari_cli/tari.config.toml` by default. You can override any value on the command line with the `-e KEY=VALUE` flag.
+
+Common configuration keys:
+
+| Key | Description | Example |
+|-----|-------------|---------|
+| `network` | Target network | `localnet`, `esme`, `mainnet` |
+| `wallet_address` | Wallet daemon JSON-RPC endpoint | `http://127.0.0.1:5100` |
+| `base_dir` | CLI data directory | `~/.local/share/tari_cli` |
+
+<CodeGroup>
+```bash Override Config at Runtime
+# Publish to mainnet with a custom wallet address
+tari publish my_template \
+  -e network=mainnet \
+  -e wallet_address=http://127.0.0.1:9000
+```
+
+```toml ~/.config/tari_cli/tari.config.toml
+# Example config file
+network = "esme"
+wallet_address = "http://127.0.0.1:5100"
+```
+</CodeGroup>
+
+## Command Quick Reference
+
+| Command | What it does |
+|---------|-------------|
+| `tari create <name>` | Scaffold a new template workspace |
+| `tari add <name>` | Add a new template crate to the current workspace |
+| `tari publish [name]` | Build and publish a template to the configured network |
+| `tari help <command>` | Show detailed help for any command |
+| `tari --version` | Print the CLI version |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Publishing" icon="upload" href="/ootle/publishing">
+    Full step-by-step guide to publishing your template to the network.
+  </Card>
+  <Card title="Testing" icon="flask" href="/ootle/templates/testing">
+    Test your templates locally before spending on publish fees.
+  </Card>
+  <Card title="Template Overview" icon="code" href="/ootle/templates/overview">
+    Learn the fundamentals of writing Ootle templates in Rust.
+  </Card>
+  <Card title="API Overview" icon="book" href="/ootle/reference/api-overview">
+    Complete reference for tari_template_lib modules and types.
+  </Card>
+</CardGroup>

@@ -1,0 +1,81 @@
+---
+title: "Tari Ootle: The Layer 2 Smart Contract Network"
+sidebarTitle: "Overview"
+description: "The Ootle is Tari's Layer 2 smart contract network. Build decentralized apps using WASM templates written in Rust, powered by TARI tokens."
+---
+
+The Ootle is Tari's Layer 2 smart contract network — a Byzantine fault-tolerant platform where developers build decentralized applications using smart contracts called **templates**, written in Rust and compiled to WebAssembly. Whether you're shipping a DeFi protocol, an NFT marketplace, or an agentic payment system, the Ootle gives you a fast, programmable, and confidentiality-aware environment to do it.
+
+## What Is the Ootle?
+
+The Ootle sits on top of Tari's Layer 1 proof-of-work chain (the Minotari network) and provides a fully programmable execution environment for on-chain applications — called **tapplets**. All dapp activity runs on the Ootle: DeFi, NFTs, SocialFi, GameFi, stablecoins, streaming payments, agentic payments, and more.
+
+<CardGroup cols={2}>
+  <Card title="Getting Started" icon="rocket" href="/ootle/getting-started">
+    Install the Ootle CLI, scaffold your first template project, and run your tests in under 10 minutes.
+  </Card>
+  <Card title="Wallet Setup" icon="wallet" href="/ootle/wallet-setup">
+    Download the wallet daemon, connect to the Esmeralda testnet, and claim free test tokens from the faucet.
+  </Card>
+  <Card title="Templates Overview" icon="code" href="/ootle/templates/overview">
+    Learn how templates define on-chain logic and how components hold state as live instances of a template.
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/ootle/cli">
+    Full reference for the `tari` command-line tool: create, build, test, and publish templates.
+  </Card>
+</CardGroup>
+
+## Core Concepts
+
+### Templates and Components
+
+A **template** is the Ootle's equivalent of a smart contract. You write it in Rust, compile it to WebAssembly (WASM), and publish it on-chain. The template defines the logic, data structures, and state transitions for your application.
+
+A **component** is a live, on-chain instance of a template. It holds state — think of it like an object whose class is the template. You can deploy many components from the same template, each with its own independent state.
+
+### The TARI Token
+
+TARI is the native fuel for Ootle transactions. Every instruction, state write, and template publication costs TARI. There is only one way to create TARI: **burn XTM 1:1 on Layer 1**. This one-way bridge is called the **Turbine Model** — it ties the economic activity of the Ootle directly back to Tari's proof-of-work base layer, creating a sustainable supply relationship between the two networks.
+
+A portion of every Ootle transaction fee is paid to validators; a portion is burned. This burning mechanism creates circulating-supply equilibrium at scale, maintaining a soft 1:1 peg between XTM and TARI without complicated peg-out mechanisms.
+
+<Note>
+  Test tokens on the Esmeralda testnet have no real-world value. Use the built-in wallet faucet to claim free testnet TARI for development and experimentation.
+</Note>
+
+### Validator Nodes
+
+**Validator nodes** form the consensus backbone of the Ootle. They execute template instructions, reach Byzantine fault-tolerant agreement on the resulting state, and scan the Layer 1 chain for burn proofs that create new TARI. Anyone can run a validator node to participate in the network.
+
+### The Indexer
+
+The **indexer** is a read-only gateway into on-chain state. It lets your application query accounts, balances, component state, and transaction history without running a full validator node. Point your front-end or back-end at a public indexer to get started quickly.
+
+## Public Testnet
+
+The Igor / Esmeralda testnet is the live public test environment for the Ootle. The following public nodes are available:
+
+| Service        | Endpoint                          |
+|----------------|-----------------------------------|
+| Validator Node | http://18.217.22.26:12006         |
+| Indexer        | http://18.217.22.26:12502         |
+
+Connect your wallet to the Esmeralda testnet with:
+
+```bash
+./tari_ootle_walletd --network esme
+```
+
+## Agent-First Documentation
+
+One of the key use cases emerging on the Ootle is **agentic payments** — autonomous agents that hold funds, execute contracts, and interact with on-chain services without human intervention. To support this, this documentation has been designed with an agent-first mindset.
+
+If you use an AI coding agent (Claude Code, Cursor, Windsurf, Aider, and others), you can point it directly at this documentation or install an Ootle skill so it understands the SDK, CLI workflow, and common patterns out of the box.
+
+```bash
+# Install the Ootle skill for Claude Code
+mkdir -p .claude/skills/ootle && curl -fsSo .claude/skills/ootle/SKILL.md \
+  https://ootle.tari.com/.well-known/skills/claude-code/SKILL.md
+```
+
+Skills for other agents are listed at [ootle.tari.com/llms.txt](https://ootle.tari.com/llms.txt). All skills are auto-discoverable by agents that support the Agent Skills standard at `https://ootle.tari.com/.well-known/skills/`.

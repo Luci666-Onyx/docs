@@ -1,0 +1,108 @@
+---
+title: "Get Started Building on the Tari Ootle Network"
+sidebarTitle: "Getting Started"
+description: "Set up your Rust development environment, install the Ootle CLI, and write your first Tari smart contract template in under 10 minutes."
+---
+
+Building on the Ootle starts with Rust. Templates are Rust library crates compiled to WebAssembly, so your existing Rust toolchain is all you need to get your first project off the ground. This guide walks you through installing the prerequisites, scaffolding a template project with the Ootle CLI, and running the generated tests to confirm everything is working before you connect to the network.
+
+## Prerequisites
+
+You need the following installed before you begin.
+
+**Rust (latest stable)** with the `wasm32-unknown-unknown` compilation target:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup target add wasm32-unknown-unknown
+```
+
+**Node.js 20+** is optional — you only need it if you plan to build a web UI for your tapplet. Follow the instructions at [nodejs.org](https://nodejs.org/en/download) for your platform.
+
+<Tip>
+  We recommend managing Node.js versions with [`nvm`](https://github.com/nvm-sh/nvm) so you can switch between projects easily. The Ootle project itself uses `pnpm` for package management when building web UIs.
+</Tip>
+
+## Steps
+
+<Steps>
+
+### Install the Tari Ootle CLI
+
+The CLI scaffolds new template projects, runs a local test environment, and publishes compiled WASM templates to the network. Install it from crates.io using Cargo:
+
+```bash
+cargo install tari-ootle-cli
+```
+
+This installs a binary called `tari`. Verify it's available:
+
+```bash
+tari --help
+```
+
+### Set up your AI coding agent (optional)
+
+If you use an AI coding agent, install the Ootle skill so it understands the template SDK, the CLI workflow, and common patterns before it writes a single line of code.
+
+```bash
+# Claude Code
+mkdir -p .claude/skills/ootle && curl -fsSo .claude/skills/ootle/SKILL.md \
+  https://ootle.tari.com/.well-known/skills/claude-code/SKILL.md
+```
+
+Skills for Cursor, Windsurf, Aider, and others are listed at [ootle.tari.com/llms.txt](https://ootle.tari.com/llms.txt). Any agent that supports the Agent Skills Discovery standard can auto-discover all skills from `https://ootle.tari.com/.well-known/skills/` — no manual setup needed.
+
+### Create your first template project
+
+Use the `tari create` command to scaffold a new template. When prompted, select the **basic** template type to start with the simplest possible structure.
+
+```bash
+tari create my_first_template
+cd my_first_template
+```
+
+<Tip>
+  For additional starting points — counters, fungible tokens, NFT collections, and more — use [`cargo-generate`](https://github.com/cargo-generate/cargo-generate) with the official Ootle template repository. Run `cargo generate tari-project/ootle-templates` to browse the full list of starter types.
+</Tip>
+
+### Explore the generated project
+
+The scaffolded project is a Rust library crate ready to compile to WASM. Here's what's inside:
+
+| File / Directory   | Purpose                                                                 |
+|--------------------|-------------------------------------------------------------------------|
+| `Cargo.toml`       | Crate manifest with `tari_template_lib` as a dependency                 |
+| `src/lib.rs`       | Your template logic — components, methods, and state definitions        |
+| `tests/test.rs`    | Unit tests using `tari_template_test_tooling` for in-process simulation |
+
+Open `src/lib.rs` to see the `#[template]` macro and a minimal component definition. The `tari_template_lib` crate provides the building blocks: resource types, component storage, access rules, and event emission.
+
+### Run the tests
+
+The generated project includes a working test suite that runs entirely in-process — no running network required. Verify your setup is correct:
+
+```bash
+cargo test
+```
+
+All tests should pass. This confirms that Rust, the WASM target, and the template toolchain are correctly installed and that the project compiles without errors.
+
+</Steps>
+
+## Next Steps
+
+Your template compiles and your tests pass — you're ready to interact with the network. The next step is to set up a wallet, which you'll need to sign transactions and publish templates to the Esmeralda testnet.
+
+<CardGroup cols={2}>
+  <Card title="Wallet Setup" icon="wallet" href="/ootle/wallet-setup">
+    Download the wallet daemon, connect to the Esmeralda testnet, and claim free test TARI from the faucet.
+  </Card>
+  <Card title="Templates Overview" icon="code" href="/ootle/templates/overview">
+    Deep-dive into template structure, component state, resources, access rules, and event emission.
+  </Card>
+</CardGroup>
+
+<Note>
+  You need a funded wallet account before you can publish a template to the network. Publishing compiles your WASM and sends it in an on-chain transaction, which costs a small amount of TARI. On the Esmeralda testnet, you can claim free tokens from the faucet in the wallet web UI.
+</Note>

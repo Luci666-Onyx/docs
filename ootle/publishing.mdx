@@ -1,0 +1,196 @@
+---
+title: "Publish Your Ootle Template to the Tari Network"
+sidebarTitle: "Publishing"
+description: "Compile your Rust template to WASM, connect your wallet daemon, and publish your Ootle smart contract to the Tari network."
+---
+
+Publishing a template makes your smart contract code permanently available on the Tari Ootle network. Once published, anyone can instantiate your template to create on-chain component instances. This guide walks you through everything from compiling your WASM binary to instantiating your first component.
+
+<Tip>
+  Always test your template thoroughly using the `TemplateTest` harness before publishing. Once a template is on-chain, it cannot be modified — you'd need to publish a new version. Testing locally is free; publishing costs TARI tokens in gas fees.
+</Tip>
+
+## Prerequisites
+
+Before you publish, make sure you have:
+
+- **A funded wallet daemon** running and connected to your target network (see [Wallet Setup](/ootle/cli))
+- **A built and tested template** — run `cargo test` and confirm all tests pass
+- **TARI tokens** in your wallet's default account to pay the publish fee (use the built-in faucet for testnet)
+
+<Note>
+  Publishing costs TARI tokens. The fee scales with your compiled WASM binary size and rises steeply above a 96 KiB allowance. The wallet daemon automatically estimates the exact fee before you confirm.
+</Note>
+
+<Steps>
+
+### Step 1: Build the WASM Binary
+
+Compile your template to WebAssembly using Cargo with the `wasm32-unknown-unknown` target:
+
+```bash
+cargo build --target wasm32-unknown-unknown --release
+```
+
+The compiled binary is located at:
+
+```
+target/wasm32-unknown-unknown/release/<your_template_name>.wasm
+```
+
+<CodeGroup>
+```bash Check Binary Size
+# Templates must be under 1.5 MiB.
+# Fees rise steeply above 96 KiB.
+ls -lh target/wasm32-unknown-unknown/release/*.wasm
+```
+
+```bash Optimize Before Publishing (optional)
+# The wallet daemon runs wasm-opt automatically before publishing,
+# so manual optimization is optional but can help you estimate costs.
+wasm-opt -Oz \
+  target/wasm32-unknown-unknown/release/my_template.wasm \
+  -o target/wasm32-unknown-unknown/release/my_template_opt.wasm
+```
+</CodeGroup>
+
+### Step 2: Start Your Wallet Daemon
+
+If your wallet daemon isn't already running, start it and connect it to your target network:
+
+<CodeGroup>
+```bash Connect to Esmeralda Testnet
+tari_ootle_walletd --network esme
+```
+
+```bash Connect to Mainnet
+tari_ootle_walletd --network mainnet
+```
+
+```bash Connect to Localnet (development)
+tari_ootle_walletd --network localnet
+```
+</CodeGroup>
+
+Wait for the wallet to sync. You can check your balance and claim testnet funds from the Esmeralda faucet via the wallet web UI.
+
+### Step 3: Publish Using the CLI
+
+Run `tari publish` from your workspace root. The CLI builds your template, estimates the fee, and prompts you to confirm before submitting the transaction.
+
+<CodeGroup>
+```bash Publish (default config)
+tari publish my_template
+```
+
+```bash Publish to Testnet Explicitly
+tari publish my_template -e network=esme
+```
+
+```bash Publish with Explicit Wallet Address
+tari publish my_template \
+  -e network=esme \
+  -e wallet_address=http://127.0.0.1:5100
+```
+
+```bash Using the Wallet Web UI Instead
+# Navigate to your running wallet daemon web UI (typically http://localhost:5100)
+# Click "Publish Template" on the Home page.
+# Upload the .wasm file from target/wasm32-unknown-unknown/release/.
+# Click "Estimate Fee", then "Publish Template".
+```
+</CodeGroup>
+
+Example CLI output:
+
+```
+✅ Init configuration and directories
+✅ Refresh project templates repository
+✅ Refresh wasm templates repository
+✅ Building WASM template project my_template
+🔗 Connected to wallet version 0.20.0 (network: esme)
+❓ No Account specified. Using default account: component_bb20db18...
+✅ WASM size: 148 KiB
+⚠️  Publishing this template costs 67599 micro-TTARI, are you sure? yes
+✅ Publishing template. This may take a while...
+⭐ Your new template's address: 3bba17783b1c1a3c76d1a70cfac1bb159352b5b1...
+```
+
+### Step 4: Record Your Template Address
+
+After the transaction confirms, the CLI prints your **Template Address** — the permanent on-chain address of your template code. Save this address; you'll need it to instantiate components.
+
+```
+⭐ Your new template's address: 3bba17783b1c1a3c76d1a70cfac1bb159352b5b109f38a71c405c40e8cd5d2d3
+```
+
+You can also find your published templates by navigating to **Templates** in the wallet web UI sidebar.
+
+### Step 5: Instantiate Your Template
+
+Instantiation calls your template's constructor, which deploys a new component instance on-chain and returns a **Component Address**.
+
+<CodeGroup>
+```bash Using the Wallet CLI
+# Call your template's constructor with arguments
+tari_wallet_cli call-function \
+  --template 3bba17783b1c1a3c76d1a70cfac1bb159352b5b1... \
+  --function new \
+  --args '[100]'
+```
+
+```bash Using the Tari CLI (transaction builder)
+# Build and submit a transaction that calls your constructor
+tari call-function \
+  --template <TEMPLATE_ADDRESS> \
+  --function new \
+  --args '[100]'
+```
+</CodeGroup>
+
+After successful instantiation you'll receive a **Component Address** — the address of this specific on-chain instance. Use this address with `CallMethod` instructions to invoke methods on the component.
+
+</Steps>
+
+## Testnet vs Mainnet
+
+<Note>
+  Always test on Esmeralda testnet before deploying to mainnet. Testnet TARI (`TTARI`) has no real value and is available for free from the faucet.
+</Note>
+
+| Network | Flag | TARI | Use case |
+|---------|------|------|----------|
+| Localnet | `network=localnet` | Mock | Local development with `TemplateTest` |
+| Esmeralda | `network=esme` | `TTARI` (testnet, free) | Integration testing with a live network |
+| Mainnet | `network=mainnet` | `TARI` (real value) | Production deployment |
+
+<Tip>
+  The workflow is the same for all networks — only the `network` config value changes. Get your template working perfectly on Esmeralda before switching to mainnet.
+</Tip>
+
+## After Publishing
+
+Once your template is published and a component is instantiated, callers interact with it by submitting transactions containing `CallMethod` instructions. You can:
+
+- Call methods via the wallet CLI or web UI
+- Build transactions programmatically using the [Tari SDK](/ootle/reference/api-overview)
+- Let other templates call your component via cross-component invocations
+
+If you need to change your template's logic, publish a new template (it will receive a different address) and migrate users to it — the original template remains unchanged on-chain forever.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CLI Reference" icon="terminal" href="/ootle/cli">
+    Full reference for all `tari` CLI commands and configuration.
+  </Card>
+  <Card title="Testing" icon="flask" href="/ootle/templates/testing">
+    Test your template with TemplateTest before spending on publish fees.
+  </Card>
+  <Card title="Template Overview" icon="code" href="/ootle/templates/overview">
+    Review the fundamentals of writing Ootle templates.
+  </Card>
+  <Card title="API Overview" icon="book" href="/ootle/reference/api-overview">
+    Reference for tari_template_lib and the tari_wallet_cli SDK.
+  </Card>
+</CardGroup>

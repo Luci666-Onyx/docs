@@ -1,0 +1,88 @@
+---
+title: "Tari Tokenomics: XTM Supply, Emission, and Distribution"
+sidebarTitle: "Tokenomics"
+description: "Tari has a 21 billion XTM total supply with exponential decay block rewards, a 1% tail emission, and a 30% pre-mine with vesting schedules."
+---
+
+Tari's economic design reflects a core belief that a healthy blockchain needs long-term miner incentives, fair distribution to early contributors, and a credible link between its two network layers. This page explains the two tokens in the Tari ecosystem, how XTM is emitted over time, how the 30% pre-mine is structured and vested, and how the Turbine Model connects Minotari's base layer to the Ootle's smart contract economy.
+
+<Warning>
+  XTM and TARI tokens have not been registered under the Securities Act of 1933, the Securities Exchange Act of 1934, or any other applicable United States federal or state securities laws. These tokens are not offered or sold in the United States or to U.S. persons. Nothing on this page constitutes an offer to sell or a solicitation of an offer to buy any security. You should consult your own legal and financial advisors before acquiring any digital assets.
+</Warning>
+
+## Two Tokens: XTM and TARI
+
+Tari's two-layer architecture is reflected in its two-token model.
+
+**XTM** is the native token of **Minotari**, Tari's Layer 1 proof-of-work blockchain. XTM is earned by miners, used to pay Layer 1 transaction fees, and serves as the economic anchor for the entire protocol.
+
+**TARI** is the native token of **the Ootle**, Tari's Layer 2 smart contract network. TARI can only be created by burning XTM on Layer 1 at a 1:1 ratio — there is no independent emission of TARI. Every TARI token in existence represents XTM that was permanently removed from the Minotari supply.
+
+## Total Supply and Emission Schedule
+
+The total supply of XTM is **21 billion tokens**. The full supply is emitted over approximately **27.8 years** via an exponential decay function. Unlike Bitcoin's discrete four-year halving events, Tari's block reward declines smoothly **block by block**, with the reward approximately halving roughly every three years.
+
+Once annual emissions fall to **1% of the total XTM supply**, the protocol transitions to a **perpetual 1% annual tail emission**. This tail emission continues indefinitely, ensuring miners always have a baseline economic incentive to secure Minotari — even long after the initial supply curve has flattened.
+
+<Tip>
+  The tail emission is not a bug or a concession — it is an intentional design decision. A blockchain without miner incentives is a blockchain with weakening security over time. Tari's 1% tail emission keeps the long-term security model sustainable.
+</Tip>
+
+## Mining Rewards
+
+Miners receive **70% of the initial XTM emission**. This breaks down as follows:
+
+- **100% of all block rewards** flow directly to miners.
+- **100% of Layer 1 transaction fees** are paid to miners.
+- Block rewards are distributed equally across Minotari's four mining algorithms — each algorithm (RxM, RxT, SHA3x, and Cuckaroo) receives **25% of every block reward**.
+
+The remaining 30% of the initial emission is allocated to the pre-mine, described below.
+
+## Pre-Mine Allocation (30%)
+
+To fund the people and organisations who built Tari and to seed community growth, 30% of the total XTM supply is reserved as a pre-mine. All pre-mine allocations are subject to vesting schedules — none of it is liquid at launch except for a specific liquidity provision described below.
+
+| Allocation | % of Supply | Vesting Schedule |
+|---|---|---|
+| **Community** | 5% | Unlocks monthly over 12 months, starting 6 months after mainnet launch |
+| **Protocol Infrastructure & Grants** | 9% | 40% available at launch for liquidity provision; remainder unlocks monthly over 4 years starting 6 months after mainnet |
+| **Contributors** | 4% | Unlocks monthly over 5 years, starting 12 months after mainnet launch |
+| **Participants (early supporters)** | 12% | Unlocks monthly over 2 years, starting 12 months after mainnet launch |
+| **Total Pre-Mine** | **30%** | — |
+
+### Community (5%)
+
+The community allocation funds incentive programs, grants, and ecosystem development initiatives. Tokens from this tranche begin unlocking monthly **six months after mainnet** and are fully distributed over the following 12 months.
+
+### Protocol Infrastructure & Grants (9%)
+
+This allocation supports long-term protocol development, infrastructure, and ecosystem grants. **40% of this tranche is available at launch** to provide liquidity on exchanges and decentralised markets. The remaining 60% unlocks monthly over **four years**, beginning six months after mainnet.
+
+### Contributors (4%)
+
+Contributors are the developers, researchers, and team members who built the Tari protocol. Their allocation begins unlocking monthly **12 months after mainnet** and is fully vested over the following five years.
+
+### Participants (12%)
+
+Participants are early supporters who backed Tari in its pre-launch phase. This is the largest pre-mine tranche. Tokens begin unlocking monthly **12 months after mainnet** and vest fully over two years.
+
+## The Turbine Model and TARI Economics
+
+The economic connection between XTM and TARI is managed by the **Turbine Model**, which governs how TARI is created and destroyed.
+
+<Steps>
+  <Step title="Burn XTM to Mint TARI">
+    To obtain TARI for use on the Ootle, you burn XTM on Minotari at a **1:1 ratio**. The XTM is permanently destroyed and the equivalent amount of TARI is minted on the Ootle.
+  </Step>
+  <Step title="Use TARI for Ootle Fees">
+    All transaction fees on the Ootle are paid in TARI. This creates organic demand for TARI proportional to usage of the smart contract layer.
+  </Step>
+  <Step title="Burn a Portion of Fees">
+    A portion of every Ootle transaction fee is **burned**, permanently removing TARI from circulation. This introduces a deflationary pressure on TARI that is directly tied to network activity.
+  </Step>
+  <Step title="The Throttle Algorithm Adjusts the Burn Rate">
+    The **Throttle** algorithm continuously monitors the state of both layers and dynamically adjusts how much of each fee is burned versus retained. This mechanism is designed to maintain the **soft 1:1 peg** between XTM and TARI and to stabilise the broader ecosystem over time.
+  </Step>
+</Steps>
+
+The Turbine Model creates a feedback loop between the two layers: as Ootle usage grows, more TARI is burned, which increases demand for burning XTM to create new TARI, which in turn benefits XTM holders and miners on Minotari.

@@ -1,0 +1,71 @@
+---
+title: "Minotari Base Node: Full Node for the Tari Network"
+sidebarTitle: "Overview"
+description: "Run a Minotari base node to sync the Tari blockchain, serve the P2P network, and expose a gRPC API for wallets and exchange integrations."
+---
+
+The Minotari base node is the backbone of the Tari network. It validates every block and transaction, maintains a full copy of the blockchain, participates in peer-to-peer gossip, and exposes a gRPC API that wallets, miners, and exchange backends use to interact with the chain. Running your own node gives you a trustless, private connection to the Tari network without relying on any third party.
+
+## What the base node does
+
+When you run `minotari_node`, it connects to the Tari peer-to-peer network, downloads and verifies all blocks from genesis, and keeps your local copy of the chain up to date. Once synced, the node:
+
+- **Validates and stores the blockchain** — every block and transaction is checked against the Tari consensus rules before being written to the local database.
+- **Serves the P2P network** — your node relays transactions and blocks to peers, strengthening the network's resilience and decentralisation.
+- **Exposes a gRPC API** — the base node binds a gRPC server to `127.0.0.1:18142` by default. Wallets, miners, and exchange integrations use this API to submit transactions, query balances, monitor the chain tip, and more.
+
+## Who should run a base node
+
+<CardGroup cols={3}>
+  <Card title="Exchanges" icon="building-columns">
+    If you are integrating XTM deposits and withdrawals, you should run your own node. It gives you a private, reliable gRPC endpoint and removes any dependency on third-party infrastructure. Running multiple nodes as backups is recommended for high-availability deployments.
+  </Card>
+  <Card title="Miners" icon="pickaxe">
+    Both the standalone SHA-3 miner (`minotari_miner`) and the Monero merge-mining proxy (`minotari_merge_mining_proxy`) communicate with a base node over gRPC to fetch block templates and submit solved blocks. Running your own node reduces latency and gives you full control.
+  </Card>
+  <Card title="Developers" icon="code">
+    If you are building applications on Tari, a local base node gives you a sandboxed gRPC endpoint to develop against. You can also point a node at Testnet (Esmeralda) or Nextnet to test against pre-release features without touching real funds.
+  </Card>
+</CardGroup>
+
+## Published binaries
+
+Each Tari release ships five binaries. You can download them from [tari.com/downloads](https://tari.com/downloads) or build them from source.
+
+| Binary | Role |
+|---|---|
+| `minotari_node` | Full base node — validates and stores the blockchain, serves the P2P network and gRPC API on port 18142. |
+| `minotari_console_wallet` | Terminal wallet for sending, receiving, and managing XTM. Exposes a gRPC API on port 18143 when enabled. |
+| `minotari_miner` | Standalone SHA-3 miner. Connects to a base node over gRPC to mine blocks. |
+| `minotari_merge_mining_proxy` | Lets you merge-mine Tari alongside Monero via XMRig. Acts as a proxy between XMRig and the Tari network. |
+| `minotari_offline_signer` | Signs one-sided transactions on an air-gapped machine, keeping private keys completely offline. |
+
+<Note>
+  All five binaries are included in every release package from [tari.com/downloads](https://tari.com/downloads) and in the [GitHub releases](https://github.com/tari-project/tari/releases). The repository also contains additional tools (MCP servers, peer-sync diagnostics, utilities) that are built from source but not shipped in release packages.
+</Note>
+
+## Available networks
+
+Tari operates three networks. You select a network at startup with the `--network` flag or by setting `network` in `config.toml`.
+
+| Network | Flag value | Purpose |
+|---|---|---|
+| Mainnet | `mainnet` | Production network with real XTM value. Use this for all exchange integrations and live wallets. |
+| Testnet (Esmeralda) | `esme` | Development and testing network. Tokens have no real-world value. Free tokens are available from the faucet. |
+| Nextnet | `nextnet` | Pre-release network for testing features before they are promoted to Mainnet. |
+
+See the [Networks](/node/networks) page for a full comparison and instructions on switching between networks.
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Installation" icon="download" href="/node/installation">
+    Download pre-built binaries or build from source. Step-by-step instructions for Linux, macOS, and Windows.
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/node/configuration">
+    Customise gRPC settings, transport options, ports, and peer connections via `config.toml`.
+  </Card>
+  <Card title="Networks" icon="network-wired" href="/node/networks">
+    Learn about Mainnet, Testnet (Esmeralda), and Nextnet and how to switch between them.
+  </Card>
+</CardGroup>

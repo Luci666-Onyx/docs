@@ -1,0 +1,168 @@
+---
+title: "Tari Networks: Mainnet, Testnet, and Nextnet"
+sidebarTitle: "Networks"
+description: "Tari runs three networks: Mainnet for real XTM transactions, Esmeralda Testnet for safe experimentation, and Nextnet for pre-release features."
+---
+
+Tari runs three separate networks simultaneously. Each network has its own peer set, blockchain, and consensus rules, so tokens on one network have no value or interoperability with another. Choosing the right network before you start is important — a node built for Mainnet cannot join the Testnet, and vice versa.
+
+## Network comparison
+
+| Network | Name | Purpose | Real XTM value | Faucet |
+|---|---|---|---|---|
+| Mainnet | Minotari | Production — live XTM transactions | ✅ Yes | ❌ No |
+| Testnet | Esmeralda | Development and testing | ❌ No | ✅ Yes |
+| Nextnet | Nextnet | Pre-release feature testing | ❌ No | ❌ No |
+
+---
+
+## Mainnet
+
+Mainnet is the Tari production network. XTM tokens on Mainnet have real-world value. All exchange integrations, live wallets, and production miners must use Mainnet.
+
+- The block explorer is available for browsing confirmed transactions and blocks.
+- All five published binaries — `minotari_node`, `minotari_console_wallet`, `minotari_miner`, `minotari_merge_mining_proxy`, and `minotari_offline_signer` — default to Mainnet when downloaded from [tari.com/downloads](https://tari.com/downloads).
+- Data is stored under `~/.tari/mainnet/` (Linux/macOS) or `%USERPROFILE%\.tari\mainnet\` (Windows).
+
+<Warning>
+  Always verify you are connected to Mainnet before conducting real transactions. Use the `GetTipInfo` gRPC method or the `watch status` / `get-chain-metadata` console commands to confirm the network name and chain tip.
+</Warning>
+
+---
+
+## Testnet (Esmeralda)
+
+Esmeralda is the Tari development testnet. Tokens on this network have no monetary value and exist solely for testing purposes.
+
+- Use Esmeralda when developing integrations, testing wallet flows, or experimenting with the gRPC API before going live on Mainnet.
+- Free testnet tokens are available from the Tari faucet — check the [Tari community channels](https://community.tari.com/) for the current faucet address.
+- Data is stored under `~/.tari/esmeralda/` (Linux/macOS) or `%USERPROFILE%\.tari\esmeralda\` (Windows).
+
+<Note>
+  Testnet may be reset periodically, which wipes the chain history and any testnet tokens you hold. Do not rely on Testnet for data persistence.
+</Note>
+
+---
+
+## Nextnet
+
+Nextnet is a pre-release network used by the Tari core team to test new protocol features before they are promoted to Mainnet. It sits between Testnet and Mainnet in the release pipeline.
+
+- Features on Nextnet may be unstable or subject to change without notice.
+- Tokens on Nextnet have no real-world value.
+- Nextnet is useful for operators who want early access to upcoming changes and can tolerate occasional instability.
+- Data is stored under `~/.tari/nextnet/` (Linux/macOS) or `%USERPROFILE%\.tari\nextnet\` (Windows).
+
+---
+
+## Switching networks
+
+### At the command line
+
+Pass the `--network` flag when starting any Tari application:
+
+```bash
+# Mainnet (production)
+minotari_node --network mainnet
+
+# Testnet (Esmeralda)
+minotari_node --network esme
+
+# Nextnet
+minotari_node --network nextnet
+```
+
+The same flag works for the console wallet and miner:
+
+```bash
+minotari_console_wallet --network esme
+minotari_miner --network esme
+```
+
+### In config.toml
+
+Set the `network` key in the `[common]` section of your `config.toml`:
+
+<CodeGroup>
+```toml Mainnet
+[common]
+network = "mainnet"
+```
+
+```toml Testnet
+[common]
+network = "esmeralda"
+```
+
+```toml Nextnet
+[common]
+network = "nextnet"
+```
+</CodeGroup>
+
+### Via environment variable
+
+```bash
+export TARI_NETWORK=mainnet
+minotari_node
+```
+
+The command-line flag takes precedence over the environment variable, which takes precedence over the config file.
+
+### Building for a specific network
+
+If you are building from source, you also need to set `TARI_TARGET_NETWORK` at compile time. A binary compiled for `mainnet` cannot run on `testnet`, and vice versa:
+
+```bash
+# Build for Mainnet
+TARI_TARGET_NETWORK=mainnet cargo build --release
+
+# Build for Testnet
+TARI_TARGET_NETWORK=testnet cargo build --release
+
+# Build for Nextnet
+TARI_TARGET_NETWORK=nextnet cargo build --release
+```
+
+Pre-built binaries from [tari.com/downloads](https://tari.com/downloads) are published separately for each network target.
+
+---
+
+## Verifying your network connection
+
+Before any critical operation, confirm that your node is on the correct network and fully synced. The gRPC `GetTipInfo` method returns the current network name alongside the chain tip:
+
+```bash
+# Using grpcurl (install from https://github.com/fullstorydev/grpcurl)
+grpcurl -plaintext 127.0.0.1:18142 tari.rpc.BaseNode/GetTipInfo
+```
+
+Example response on Mainnet:
+
+```json
+{
+  "metadata": {
+    "bestBlockHeight": "123456",
+    "bestBlockHash": "...",
+    "accumulatedDifficulty": "..."
+  },
+  "isNodeSynced": true,
+  "initialSyncAchieved": true
+}
+```
+
+You can also check the node console directly:
+
+```
+>> get-chain-metadata
+Best block height: 123456
+Total accumulated difficulty: 5892870
+Best block hash: 2c4f92854b2160324b8afebaa476b39be4004d2a7a19c69dd2d4e4da257bfee2
+
+>> watch status
+v1.0.0 mainnet  State: Listening  Tip: 123456  Mempool: 3tx  Connections: 8|2
+```
+
+<Note>
+  Each network uses different gRPC endpoints and different data directories. If you run nodes for multiple networks on the same machine, ensure each uses a distinct `--base-path` and that their gRPC ports do not conflict. You can override the gRPC port with the `grpc_address` setting in `config.toml`.
+</Note>

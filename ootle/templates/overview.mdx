@@ -1,0 +1,306 @@
+---
+title: "Tari Ootle Templates: Writing Smart Contracts in Rust"
+sidebarTitle: "Overview"
+description: "Ootle templates are WASM smart contracts written in Rust. Learn the #[template] macro, component structure, constructors, and methods."
+---
+
+Templates are the building blocks of the Tari Ootle Layer 2 network. You write a template as a Rust crate, compile it to WebAssembly (WASM), and publish it to the network — after which anyone can instantiate it to create on-chain **components** that hold state and respond to transactions.
+
+## What Is a Template?
+
+A template is a Rust `mod` block annotated with the `#[template]` macro. It defines two things: a **struct** that holds on-chain state, and an **`impl` block** that exposes the methods callers can invoke. When someone calls your template's constructor, a new component instance is deployed to the chain with its own address and its own copy of that state.
+
+<Note>
+  A **template** is the code (like a class definition). A **component** is an on-chain instance of that template (like an object). You can have many components instantiated from the same template, each with entirely independent state.
+</Note>
+
+## Template Structure
+
+Every template follows the same pattern: import the prelude, annotate the module, define a struct for component state, and implement methods in an `impl` block.
+
+<CodeGroup>
+```rust Basic Template
+use tari_template_lib::prelude::*;
+
+#[template]
+mod template {
+    use super::*;
+
+    // The first pub struct defines the component and gives the template its name.
+    pub struct MyComponent {
+        value: u64,
+    }
+
+    impl MyComponent {
+        // Constructor — returns Self, which deploys a new on-chain component
+        pub fn new(initial_value: u64) -> Self {
+            Self { value: initial_value }
+        }
+
+        // Method — takes &mut self, called via CallMethod in a transaction
+        pub fn increment(&mut self, amount: u64) {
+            self.value += amount;
+        }
+
+        // Getter — takes &self, read-only access to state
+        pub fn get_value(&self) -> u64 {
+            self.value
+        }
+
+        // Function — no self parameter, stateless
+        pub fn greet(name: String) -> String {
+            format!("Hello, {}!", name)
+        }
+    }
+}
+```
+
+```rust Full Annotated Template
+use tari_template_lib::prelude::*;
+
+#[template]
+mod template {
+    use super::*;
+
+    pub struct MyComponent {
+        // All fields must be CBOR-encodable; tari_template_lib types are compatible.
+        my_value: u64,
+        my_resource_address: ResourceAddress,
+    }
+
+    impl MyComponent {
+        pub fn new(initial_state: u64) -> Component<Self> {
+            // Create a new resource for this component
+            let my_resource_address = ResourceBuilder::public_fungible()
+                .with_token_symbol("TOK")
+                .build();
+
+            Component::new(Self {
+                my_value: initial_state,
+                my_resource_address,
+            })
+            .with_access_rules(ComponentAccessRules::new()
+                .method("do_something", rule![allow_all])
+                .default(rule![deny_all])
+            )
+            .create()
+        }
+
+        pub fn do_something(&mut self, value: u64) {
+            self.my_value += value;
+        }
+
+        // Private helpers are not exposed publicly
+        fn calculate_internal(&self) -> u64 {
+            self.my_value * 2
+        }
+    }
+}
+```
+</CodeGroup>
+
+## The `#[template]` Macro
+
+You annotate your template module with `#[template]` to make it work. The macro does several things for you automatically:
+
+- **ABI generation**: produces the Application Binary Interface that validator nodes use to understand and call your compiled WASM module
+- **Method exposure**: registers each `pub fn` in your `impl` block as a callable method or function
+- **State management**: handles serialization and deserialization of your component struct using CBOR encoding (`minicbor`)
+- **CBOR derives**: automatically derives `minicbor::Encode`, `minicbor::Decode`, and `minicbor::CborLen` for every struct and enum declared inside the module
+
+<Tip>
+  Every struct and enum you declare *inside* the `#[template]` module gets CBOR encoding derived automatically. For types you declare *outside* the module, add `#[derive(minicbor::Encode, minicbor::Decode, minicbor::CborLen)]` yourself and tag each field with `#[n(N)]`.
+</Tip>
+
+## Component State
+
+The fields of your struct are persisted on-chain as the component's state. A few important rules apply:
+
+- **Mutability**: to modify state, your method must take `&mut self`
+- **Encodable types**: all fields must be CBOR-encodable — the `tari_template_lib` built-in types (`Amount`, `ResourceAddress`, `Vault`, etc.) all qualify
+- **One component per template**: the first `pub struct` (or `pub enum`) in the module is treated as the component; additional structs are data types, not separate components
+
+<Warning>
+  Be mindful of the size and complexity of your component's state. Large or complex state leads to higher transaction costs and may impact performance.
+</Warning>
+
+## Constructors
+
+A constructor is any `pub fn` in the `impl` block that returns `Self` or `Component<Self>`. When invoked, the runtime creates a new component substate on-chain and assigns it a unique `ComponentAddress`.
+
+<CodeGroup>
+```rust Implicit Constructor
+impl MyComponent {
+    // Returning Self implicitly creates the component
+    pub fn new(initial_value: u64) -> Self {
+        Self {
+            my_value: initial_value,
+        }
+    }
+}
+```
+
+```rust Explicit Constructor with Access Rules
+impl MyComponent {
+    // Returning Component<Self> gives you full control
+    pub fn new(initial_value: u64) -> Component<Self> {
+        Component::new(Self {
+            my_value: initial_value,
+        })
+        .with_access_rules(ComponentAccessRules::new()
+            .method("increment", rule![allow_all])
+            .default(rule![deny_all])
+        )
+        .with_owner_rule(OwnerRule::OwnedBySigner)
+        .create()
+    }
+}
+```
+
+```rust Constructor with Address Allocation
+impl MyComponent {
+    // ComponentAddressAllocation lets callers instantiate and call
+    // the component in one transaction without knowing the address ahead of time.
+    pub fn new(
+        alloc: ComponentAddressAllocation,
+        initial_value: u64,
+    ) -> Component<Self> {
+        Component::new(Self { my_value: initial_value })
+            .with_address_allocation(alloc)
+            .create()
+    }
+}
+```
+</CodeGroup>
+
+## Methods vs Functions
+
+| Type | Signature | Called via | Use case |
+|------|-----------|------------|----------|
+| **Method (mutable)** | `pub fn foo(&mut self, ...)` | `CallMethod` | Modify component state |
+| **Method (read-only)** | `pub fn foo(&self, ...)` | `CallMethod` | Read component state |
+| **Function** | `pub fn foo(...)` (no `self`) | `CallFunction` | Constructors, stateless utilities |
+| **Private helper** | `fn foo(...)` | Internal only | Internal logic, not exposed |
+
+Functions are called on the *template* itself (without an existing component instance). Methods are called on a specific *component instance*, identified by its `ComponentAddress`.
+
+## Error Handling
+
+Error handling in templates works through panics. When a panic occurs anywhere in a transaction, the entire transaction is aborted and no state changes are committed to the chain.
+
+<CodeGroup>
+```rust Panic-based Errors
+pub fn do_something(&mut self, value: u64) {
+    // Use assert! for simple conditions
+    assert_ne!(value, 0, "Value cannot be zero");
+
+    // Use assert! with a custom message
+    assert!(value <= 1024, "Value must be 1024 or less");
+
+    // Or panic! directly
+    if !value.is_power_of_two() {
+        panic!("Value must be a power of two");
+    }
+
+    self.my_value += value;
+}
+```
+
+```rust Result Return Types
+// You can also return Result — the runtime treats Err as a panic
+pub fn safe_divide(&self, divisor: u64) -> Result<u64, String> {
+    if divisor == 0 {
+        return Err("Cannot divide by zero".to_string());
+    }
+    Ok(self.my_value / divisor)
+}
+```
+</CodeGroup>
+
+## Stateless Templates
+
+Not every template needs a component. If you just want a set of reusable pure functions — math utilities, validation helpers, or shared business logic — you can use the `stateless` flag:
+
+<CodeGroup>
+```rust Stateless Template
+use tari_template_lib::prelude::*;
+
+#[template(stateless)]
+mod math {
+    // All pub fn items are publicly callable via CallFunction.
+    pub fn add(a: u32, b: u32) -> u32 {
+        a + b
+    }
+
+    pub fn sum(values: Vec<u32>) -> u32 {
+        values.into_iter().sum()
+    }
+
+    // Private helpers are allowed; they are not exposed.
+    fn helper(a: u32) -> u32 {
+        a + 1
+    }
+}
+```
+</CodeGroup>
+
+A stateless template differs from a regular template in a few important ways:
+
+- **No component struct** — no on-chain state is ever created
+- **No instantiation** — calling a stateless function only returns its result; it never creates a component
+- **Template name is the module identifier** — in the example above, the template is named `math`
+- **Compile-time enforcement** — methods with `&self` / `&mut self`, `-> Self` constructors, and migration functions are rejected at compile time
+
+## Creating a New Template Crate
+
+The fastest way to start is with `cargo-generate`, which scaffolds a crate with the right structure and dependencies already in place:
+
+<CodeGroup>
+```bash Using cargo-generate
+# Install cargo-generate if you haven't already
+cargo install cargo-generate
+
+# Generate a new template crate
+cargo generate https://github.com/tari-project/wasm-template wasm_templates/empty \
+  -din_cargo_workspace=false --name my_template
+
+# Navigate into the new crate and run the placeholder test
+cd my_template
+cargo test
+```
+
+```bash Using the Tari CLI
+# Install the Tari CLI
+cargo install tari-ootle-cli
+
+# Create a new template workspace (prompts for template type)
+tari create my_template
+
+# Add another template to the workspace
+cd my_template
+tari add another_template
+```
+</CodeGroup>
+
+The generated crate includes:
+
+- `Cargo.toml` — pre-configured with `tari_template_lib` and `tari_template_test_tooling` dependencies
+- `src/lib.rs` — a starter template module
+- `tests/test.rs` — a placeholder test you can expand
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Build a Template" icon="hammer" href="/ootle/templates/build-a-template">
+    Walk through building a complete decentralized guessing game step by step.
+  </Card>
+  <Card title="Resources & Vaults" icon="box" href="/ootle/templates/resources-and-vaults">
+    Learn how to create tokens and manage assets in your templates.
+  </Card>
+  <Card title="Access Control" icon="lock" href="/ootle/templates/access-control">
+    Restrict methods to specific callers with ComponentAccessRules.
+  </Card>
+  <Card title="Testing" icon="flask" href="/ootle/templates/testing">
+    Unit test your templates locally with the TemplateTest harness.
+  </Card>
+</CardGroup>

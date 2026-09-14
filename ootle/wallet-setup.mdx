@@ -1,0 +1,146 @@
+---
+title: "Set Up a Tari Ootle Wallet to Fund and Publish Templates"
+sidebarTitle: "Wallet Setup"
+description: "Download and run the Tari Ootle Wallet Daemon, create an account, and claim testnet funds to start publishing smart contract templates."
+---
+
+Before you can publish a template or submit any transaction on the Ootle, you need a running wallet. The Tari Ootle Wallet Daemon (`tari_ootle_walletd`) is a lightweight background process that manages your keys, signs transactions, and exposes a web UI at `http://localhost:5100` for interacting with the network. This guide walks you through downloading the daemon, connecting to the Esmeralda testnet, creating your first account, and claiming test TARI from the built-in faucet.
+
+<Note>
+  The wallet daemon is primarily designed as a programmatic RPC service — for example, exchanges and back-end services use it internally. End-user wallets with friendlier interfaces are in active development. For testnet development, the daemon and its web UI are the recommended way to get started.
+</Note>
+
+## Steps
+
+<Steps>
+
+### Download the wallet daemon
+
+Download the latest release of `tari_ootle_walletd` for your platform from the GitHub releases page:
+
+**[https://github.com/tari-project/tari-ootle/releases](https://github.com/tari-project/tari-ootle/releases)**
+
+Unzip the archive and place the executable somewhere convenient — ideally a directory on your `PATH`.
+
+On Linux and macOS, mark the binary as executable before running it:
+
+```bash
+# Rename to a consistent name for convenience
+mv [downloaded-file] tari_ootle_walletd
+
+# Grant execute permission
+chmod +x tari_ootle_walletd
+```
+
+Confirm it's working:
+
+```bash
+./tari_ootle_walletd --help
+```
+
+### Start the wallet daemon
+
+Connect to the Esmeralda testnet by passing the `--network esme` flag:
+
+```bash
+./tari_ootle_walletd --network esme
+```
+
+The first time you run the daemon it creates a wallet configuration file and a SQLite database in a platform-specific default location. You can override this with the `--base-path` (or `-b`) flag:
+
+```bash
+# Store wallet data in a specific directory
+./tari_ootle_walletd --network esme --base-path ~/.my-ootle-wallet
+```
+
+<Tip>
+  Use `--base-path` when you want to keep multiple wallet instances isolated from each other — for example, one for each project or testnet account. The path is created automatically if it doesn't exist.
+</Tip>
+
+Once started, the daemon serves a web UI at **[http://127.0.0.1:5100](http://127.0.0.1:5100)** by default. You can change the listen address with the `--listen-on` flag:
+
+```bash
+# Listen on a non-default port
+./tari_ootle_walletd --network esme --listen-on 127.0.0.1:12345
+```
+
+By specifying the `esme` (Esmeralda) network, your wallet automatically connects to a testnet indexer. The indexer provides a view into the blockchain state — balances, transactions, and on-chain data — without you needing to run a full validator node.
+
+<Tip>
+  The public Igor testnet nodes are also available if you need to inspect raw validator or indexer state directly:
+  - **Validator Node:** http://18.217.22.26:12006
+  - **Indexer:** http://18.217.22.26:12502
+</Tip>
+
+### Create a default account
+
+Open the wallet web UI at **[http://127.0.0.1:5100](http://127.0.0.1:5100)** in your browser.
+
+On first launch you'll be prompted to create your first account. Give it a name — `default` works fine — and confirm. An account represents a secret key and a corresponding on-chain address that you use to send funds, receive funds, and sign template publications.
+
+Once created, your account appears in the UI with a balance of 0 TARI. You can create additional accounts later from the same seed if you want to separate funds across multiple projects or identities.
+
+### Claim testnet funds from the faucet
+
+You need TARI to pay for transactions, including publishing templates. On the Esmeralda testnet you can get free test tokens instantly from the built-in faucet.
+
+In the wallet web UI, click **"Claim Testnet Funds"**. The wallet submits a transaction to the testnet faucet component, and a new vault containing your test TARI is created inside your account.
+
+<Note>
+  Testnet tokens have no real-world value. They exist purely so you can develop and test without risk. The faucet can be used as many times as needed during development.
+</Note>
+
+### Copy your wallet address
+
+Your wallet address is required when publishing templates and when other accounts want to send you funds.
+
+Find it in the web UI under **Account details → Address**. Copy the full address string — you'll need it when running `tari publish` from the CLI.
+
+</Steps>
+
+## Enabling Authentication
+
+By default the wallet daemon runs without authentication. This is convenient for local development but is not appropriate for any environment where the wallet is exposed to other processes or users. To require a passkey (WebAuthn):
+
+```bash
+./tari_ootle_walletd --network esme --auth webauthn
+```
+
+On first start with this flag, you'll be prompted to register a passkey in your browser.
+
+## Resetting Your Wallet (Testnet Only)
+
+During active testnet development the network may be reset, which invalidates all on-chain state. When this happens your local wallet database will be out of sync. To wipe the local database and start fresh:
+
+```bash
+./tari_ootle_walletd --network esme reset
+```
+
+This moves your existing database to a timestamped backup file (e.g. `wallet.sqlite.1711540000.bak`) and exits. The next time you start the daemon a new, empty database is created automatically.
+
+<Tip>
+  Your seed key is stored in the OS keyring and is **not** affected by the reset command. After resetting, your wallet derives the same addresses from the same seed — so your addresses stay consistent even though the on-chain state was wiped.
+</Tip>
+
+<Warning>
+  The `reset` command only works on testnet networks. It refuses to run on mainnet to prevent accidental data loss.
+</Warning>
+
+To skip the interactive confirmation (useful in scripts or CI):
+
+```bash
+./tari_ootle_walletd --network esme reset --confirm
+```
+
+## Next Steps
+
+You now have a running wallet connected to the Esmeralda testnet with a funded account. You're ready to start publishing templates and executing transactions.
+
+<CardGroup cols={2}>
+  <Card title="Getting Started" icon="rocket" href="/ootle/getting-started">
+    Install the Ootle CLI and scaffold your first template project if you haven't already.
+  </Card>
+  <Card title="Templates Overview" icon="code" href="/ootle/templates/overview">
+    Learn how templates define on-chain logic and how to publish yours to the network.
+  </Card>
+</CardGroup>

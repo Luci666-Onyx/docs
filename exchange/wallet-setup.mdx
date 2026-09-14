@@ -1,0 +1,219 @@
+---
+title: "Configure Wallets for Exchange Deposit and Withdrawal"
+sidebarTitle: "Wallet Setup"
+description: "Set up a read-only monitoring wallet to track deposits and a cold storage wallet for withdrawals in your Minotari exchange integration."
+---
+
+Your exchange integration requires two distinct wallets with different roles and security profiles. The **monitoring (read-only) wallet** watches for incoming deposits on your internet-connected exchange server — it can see funds arriving but cannot spend them. The **cold storage wallet** holds the actual spend keys for your funds and should live on an air-gapped machine or secure hardware that is never connected to the internet during normal operation. This page walks you through setting up both.
+
+<Warning>
+  The 24-word seed phrase generated during cold wallet creation is the **only** way to recover your funds if the machine is lost, destroyed, or compromised. Write it down on paper. Consider a fireproof metal backup. **Never photograph it, type it into any connected device, or store it in a password manager or cloud service.** Anyone who obtains these words can drain your wallet irreversibly.
+</Warning>
+
+## Wallet Types at a Glance
+
+| | Monitoring Wallet | Cold Storage Wallet |
+|---|---|---|
+| **Holds spend keys?** | No — view key only | Yes |
+| **Can authorize withdrawals?** | No | Yes |
+| **Lives on internet-connected server?** | Yes | No (air-gapped) |
+| **gRPC enabled?** | Yes — port `18143` | Only when processing withdrawals |
+| **Primary use** | Track incoming deposits | Sign and broadcast withdrawals |
+
+---
+
+## Setting Up the Monitoring Wallet
+
+<Steps>
+
+### Create the wallet data directory
+
+On the internet-connected server that runs your exchange application, create a dedicated directory for the wallet data:
+
+```bash
+mkdir -p ~/tari_monitoring_wallet
+```
+
+### Run the wallet for the first time
+
+```bash
+minotari_console_wallet --base-path ~/tari_monitoring_wallet
+```
+
+When prompted whether you want to mine, answer **`n`**.
+
+At the wallet selection menu, choose **option 3** to create a read-only wallet using a view key:
+
+```
+Console Wallet
+
+1. Create a new wallet.
+2. Recover wallet from seed words or hardware device.
+3. Create a read-only wallet using a view key.
+>>
+```
+
+You will be prompted to enter the **view key** and **public spend key** that were exported from your cold storage wallet (generated in the cold wallet section below). Enter them when prompted:
+
+```
+Enter view key:  (hex)
+<your view key here>
+
+Enter the public spend key:  (hex or base58)
+<your public spend key here>
+```
+
+Set a strong wallet password when asked. Use a different password from any other wallet. You will need this password every time the monitoring wallet restarts.
+
+### Enable and configure gRPC
+
+Once the wallet launches, exit (`F10` or `Ctrl+Q`) and open the configuration file:
+
+```bash
+nano ~/.tari/mainnet/config/config.toml
+```
+
+Find the `[wallet]` section and update the following settings:
+
+```toml
+# Enable gRPC access for the wallet
+grpc_enabled = true
+
+# Bind to localhost only — never expose this port to the network
+grpc_address = "/ip4/127.0.0.1/tcp/18143"
+
+# Optional but recommended: require authentication for all gRPC calls
+# grpc_authentication = { username = "exchange_monitor", password = "your_secure_password_here" }
+```
+
+<Warning>
+  Do not enable `grpc_authentication` with a weak password, and never remove the `127.0.0.1` binding. If your exchange application and wallet run on separate machines, route the gRPC traffic through an encrypted tunnel (WireGuard, mutual-TLS, or SSH port forwarding) — never open port `18143` to the network directly.
+</Warning>
+
+### Connect the wallet to your base node
+
+In the same `config.toml`, point the wallet at the base node you set up previously. The format is `<public_key>::<public_address>`:
+
+```toml
+# Replace with the public key and address from your base node's `whoami` output
+custom_base_node = "90f67a04edcb36261e6304ca213629d183c44e26bd47e38c253473f44d901733::/onion3/f5qbkkfkoxowzvshe5mppzpgiiy76cwumpsacungeldoal6hehcgzfqd:18141"
+```
+
+You can also provide this as an environment variable if you prefer not to hard-code it in the config file:
+
+```bash
+export TARI_WALLET__CUSTOM_BASE_NODE="<public_key>::<public_address>"
+```
+
+### Start the wallet and verify gRPC
+
+Restart the wallet:
+
+```bash
+minotari_console_wallet --base-path ~/tari_monitoring_wallet
+```
+
+Then, in a second terminal, verify the gRPC endpoint is reachable:
+
+```bash
+grpcurl -plaintext localhost:18143 tari.rpc.Wallet/GetState
+```
+
+A successful response includes the wallet's scanned block height and connectivity status. Once you see a non-zero `scanned_height` that is climbing toward the chain tip, the monitoring wallet is working correctly.
+
+To retrieve the deposit address your users will send XTM to:
+
+```bash
+grpcurl -plaintext localhost:18143 tari.rpc.Wallet/GetCompleteAddress
+```
+
+This returns the wallet's base address in hex, Base58, and Emoji ID formats. Keep a copy — you will embed a Payment ID into this address for each individual user deposit.
+
+</Steps>
+
+---
+
+## Setting Up the Cold Storage Wallet
+
+The cold storage wallet generation **must** happen on a machine that is fully isolated from the internet and from other devices. Do this process on a trusted, freshly booted machine (a live USB operating system is ideal) with all network interfaces disabled.
+
+<Steps>
+
+### Prepare an isolated environment
+
+Before running the wallet:
+- Disable all network interfaces (Wi-Fi, Ethernet)
+- Disconnect all USB devices other than the one you are using to run the software
+- Ensure no screen-sharing, remote access, or recording software is running
+
+### Generate the wallet and seed phrase
+
+```bash
+minotari_console_wallet --base-path ~/tari_cold_wallet
+```
+
+At the setup menu, select **option 1** (create a new wallet). Choose **`n`** for mining and **`n`** for a hardware wallet.
+
+Set a strong passphrase when prompted.
+
+The wallet will display your **24-word seed phrase**. This is the most critical step:
+
+```
+=========================
+       IMPORTANT!
+=========================
+These are your wallet seed words.
+They can be used to recover your wallet and funds.
+WRITE THEM DOWN OR COPY THEM NOW. THIS IS YOUR ONLY CHANCE TO DO SO.
+
+=========================
+< ... 24 seed words displayed here ... >
+=========================
+```
+
+Write the seed words on paper. Verify you have copied them correctly before typing `confirm` to proceed.
+
+<Note>
+  Consider creating a second copy engraved on metal for fire and water resistance. Store the copies in physically separate, secure locations (e.g., a safe and a safety deposit box). Never store them together.
+</Note>
+
+### Export the view key and public spend key
+
+After the wallet launches, exit to the command line and export the keys needed to create the monitoring wallet:
+
+```bash
+minotari_console_wallet --base-path ~/tari_cold_wallet export-view-key-and-spend-key
+```
+
+Enter your wallet password when prompted. You will see output like:
+
+```
+View key: cb6c13f07af23380c7756bbfcd622bc3277ec2cc42abd5ed3d8ddd19fa49060c
+Spend key: f29039796b3430c6927f26bf216b6241dd7fad7f30a6640e8ac95f3d0af55a52
+```
+
+Copy both keys to a secure, offline medium. You will need them when creating the monitoring wallet (described above).
+
+### Secure and retire the cold wallet machine
+
+Once you have recorded the seed phrase and exported the view/spend keys:
+
+1. Verify your seed phrase backup is accurate.
+2. Permanently delete the `tari_cold_wallet` directory.
+3. Securely wipe the machine or destroy the live USB.
+
+The cold storage wallet is now fully contained within your seed phrase. To use the wallet for withdrawals, you will recreate it from the seed phrase on a secure machine at withdrawal time (option 2 in the wallet setup menu).
+
+</Steps>
+
+---
+
+## Port Reference
+
+| Port | Protocol | Binding | Description |
+|---|---|---|---|
+| `18143` | TCP | `127.0.0.1` only | Wallet gRPC API |
+
+## Next Steps
+
+With your monitoring wallet running and your cold wallet seed phrase secured, you are ready to start tracking deposits. See the [Deposit Monitoring](/exchange/deposits) page for how to generate per-user Payment ID addresses and listen for incoming transactions.

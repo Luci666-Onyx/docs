@@ -1,0 +1,354 @@
+---
+title: "Access Control and Authorization in Ootle Templates"
+sidebarTitle: "Access Control"
+description: "Protect Ootle template methods with ComponentAccessRules, proof-based authorization, and owner-only restrictions using the auth module."
+---
+
+By default, every public method on an Ootle component is callable only by the component's owner — but many applications need more nuanced policies: some methods should be public, others restricted to a badge holder, and still others locked down entirely. The Tari Ootle Template Library gives you fine-grained control over all of this through `ComponentAccessRules`, resource-level access rules, and proof-based authorization.
+
+<Note>
+  Access rules are enforced by validator nodes at the protocol level. They are evaluated by the same execution engine that runs your template code. There is no way to bypass them from inside a template — a method protected by `rule![deny_all]` cannot call itself.
+</Note>
+
+## Why Access Control Matters
+
+Without access rules, any caller can invoke any `pub` method on your component — including operations like withdrawing funds, minting tokens, or resetting state. Access control lets you express exactly who is allowed to do what, and the runtime enforces those rules before your method body ever executes.
+
+## Component Access Rules
+
+`ComponentAccessRules` define per-method and default authorization policies for a component. You attach them when creating the component via the builder.
+
+<CodeGroup>
+```rust Basic Access Rules
+use tari_template_lib::prelude::*;
+
+#[template]
+mod template {
+    pub struct MyComponent {
+        value: u64,
+    }
+
+    impl MyComponent {
+        pub fn new() -> Component<Self> {
+            let access_rules = ComponentAccessRules::new()
+                // Anyone can call `get_value`
+                .method("get_value", rule![allow_all])
+                // Anyone can call `increment`
+                .method("increment", rule![allow_all])
+                // All other methods (e.g. `reset`) require the owner
+                .default(rule![deny_all]);
+                // Note: not specifying .default() means non-listed methods
+                // are only callable by the component owner.
+
+            Component::new(Self { value: 0 })
+                .with_access_rules(access_rules)
+                .create()
+        }
+
+        pub fn get_value(&self) -> u64 { self.value }
+        pub fn increment(&mut self) { self.value += 1; }
+        pub fn reset(&mut self) { self.value = 0; } // owner-only
+    }
+}
+```
+
+```rust Badge-based Access Rules
+use tari_template_lib::prelude::*;
+
+#[template]
+mod template {
+    pub struct AdminComponent {
+        treasury: Vault,
+    }
+
+    impl AdminComponent {
+        pub fn new(admin_badge: ResourceAddress) -> Component<Self> {
+            let (_, initial_funds) = ResourceBuilder::public_fungible()
+                .with_token_symbol("TKN")
+                .initial_supply(Amount(1_000_000));
+
+            let access_rules = ComponentAccessRules::new()
+                // Anyone can call deposit
+                .method("deposit", rule![allow_all])
+                // Only holders of the admin badge can withdraw
+                .method("withdraw", rule![require(admin_badge)])
+                // Everything else is denied
+                .default(rule![deny_all]);
+
+            Component::new(Self {
+                treasury: Vault::from_bucket(initial_funds),
+            })
+            .with_access_rules(access_rules)
+            .create()
+        }
+
+        pub fn deposit(&mut self, bucket: Bucket) {
+            self.treasury.deposit(bucket);
+        }
+
+        pub fn withdraw(&mut self, amount: Amount) -> Bucket {
+            self.treasury.withdraw(amount)
+        }
+    }
+}
+```
+</CodeGroup>
+
+### Access Rule Variants
+
+| Rule | Meaning |
+|------|---------|
+| `rule![allow_all]` | Any caller can invoke this method |
+| `rule![deny_all]` | No caller can invoke this method (not even the owner) |
+| `rule![require(badge_address)]` | Caller must hold a resource at `badge_address` in their auth scope |
+| `rule![non_fungible(nft_address)]` | Caller must hold the specific NFT at `nft_address` |
+| `rule![require(any_of(a, b))]` | Caller must hold at least one of the listed resources |
+| `rule![m_of_n(2, key(pk1), key(pk2), key(pk3))]` | At least 2 of 3 signers must be present |
+
+## Owner Badge Pattern
+
+A common pattern is to mint a non-fungible "owner badge" at construction time and send it to the creator. This badge then gates privileged methods. Anyone holding the badge NFT can call owner-restricted methods.
+
+<CodeGroup>
+```rust Owner Badge Pattern
+use tari_template_lib::prelude::*;
+
+#[template]
+mod template {
+    pub struct ManagedVault {
+        funds: Vault,
+    }
+
+    impl ManagedVault {
+        pub fn new() -> (Component<Self>, Bucket) {
+            // Mint a single NFT to serve as the owner badge
+            let (owner_badge_address, owner_badge_bucket) =
+                ResourceBuilder::non_fungible()
+                    .metadata("name", "ManagedVault Owner Badge")
+                    .initial_supply(vec![
+                        (NonFungibleId::from_u64(1), &(), &())
+                    ]);
+
+            let (token_addr, token_bucket) = ResourceBuilder::public_fungible()
+                .with_token_symbol("MVT")
+                .initial_supply(Amount(1_000_000));
+
+            let access_rules = ComponentAccessRules::new()
+                // Anyone can deposit
+                .method("deposit", rule![allow_all])
+                // Only the badge holder can withdraw
+                .method("withdraw", rule![require(owner_badge_address)])
+                .default(rule![deny_all]);
+
+            let component = Component::new(Self {
+                funds: Vault::from_bucket(token_bucket),
+            })
+            .with_access_rules(access_rules)
+            .create();
+
+            // Return both the component AND the owner badge bucket.
+            // The caller should deposit the badge into their account.
+            (component, owner_badge_bucket)
+        }
+
+        pub fn deposit(&mut self, bucket: Bucket) {
+            self.funds.deposit(bucket);
+        }
+
+        pub fn withdraw(&mut self, amount: Amount) -> Bucket {
+            self.funds.withdraw(amount)
+        }
+    }
+}
+```
+</CodeGroup>
+
+## Resource Access Rules
+
+Resources have their own access rules governing who can mint, burn, recall, freeze, or update them. Each rule is set as a pair of `(AccessRule, UpdateRule)` — the first controls who can perform the action today, and the second controls whether that rule can be changed later.
+
+<CodeGroup>
+```rust Resource Access Rules
+use tari_template_lib::prelude::*;
+
+pub fn create_governed_token(
+    minter_badge: NonFungibleAddress,
+    admin_badge: ResourceAddress,
+) -> ResourceAddress {
+    ResourceBuilder::public_fungible()
+        .with_token_symbol("GOV")
+        // Only the minter badge can mint; this rule is locked forever.
+        .mintable(rule!(non_fungible(minter_badge)), LOCKED)
+        // Nobody can burn; the rule is locked forever.
+        .burnable(rule!(deny_all), LOCKED)
+        // Withdrawals are open; only the owner can restrict them later.
+        .withdrawable(rule!(allow_all), OWNER)
+        // Metadata updates require the admin badge.
+        .update_metadata(rule!(require(admin_badge)), OWNER)
+        .build()
+}
+```
+</CodeGroup>
+
+### UpdateRule Options
+
+| UpdateRule | Constant | Effect |
+|------------|----------|--------|
+| `UpdateRule::Locked` | `LOCKED` | Nobody can ever change this rule — not even the resource owner |
+| `UpdateRule::Owner` | `OWNER` | Only the resource owner can change this rule |
+| `UpdateRule::AccessRule(rule)` | _inline_ | Anyone satisfying `rule` can change it; the owner has no implicit override |
+
+<Tip>
+  Use `LOCKED` for any rule you want token holders to be able to rely on permanently — for example, `recall: DenyAll, LOCKED` means you can never take tokens back from holders, which is a meaningful trust guarantee.
+</Tip>
+
+## Proofs and Vault-held Badges
+
+Access rules check the transaction's **authorization scope** — a set of badges present at execution time. There are two ways a badge enters the scope:
+
+1. **Signer badges**: automatically derived from the transaction's signers (one badge per signing public key)
+2. **Vault proofs**: explicitly created by calling `create_proof_for_resource` on an account vault, then authorizing with the proof inside your method
+
+Proofs created from vaults are valid only for the current call frame. If your method invokes another component, that other component starts with an empty badge scope — signer badges and vault proofs do not automatically propagate across template boundaries.
+
+<CodeGroup>
+```rust Using Proofs in a Transaction
+// In a transaction (client-side), create a proof from an account vault
+// and pass it to a component method that requires the badge.
+
+// (This is transaction-builder pseudocode — not template Rust)
+// transaction
+//   .create_proof_from_account(account, badge_resource_address)
+//   .put_last_instruction_output_on_workspace("proof")
+//   .call_method(component, "restricted_method", args![Workspace("proof")])
+```
+
+```rust Authorizing with a Proof Inside a Template
+use tari_template_lib::prelude::*;
+
+impl MyComponent {
+    pub fn method_that_calls_another(&self, proof: Proof) {
+        // Authorize the proof so it is present in THIS call frame's scope.
+        // Methods on `self` can now check rules against it.
+        proof.authorize();
+
+        // Cross-component calls start from an empty scope, so you must
+        // explicitly pass or re-authorize proofs if the callee checks them.
+        let other = ComponentManager::get(self.other_component);
+        other.invoke("do_something", args![proof]);
+    }
+}
+```
+</CodeGroup>
+
+## Common Patterns
+
+### Public Read, Restricted Write
+
+The most common pattern: expose getters to everyone, gate writes behind a badge.
+
+<CodeGroup>
+```rust Public Read, Restricted Write
+let access_rules = ComponentAccessRules::new()
+    .method("get_value", rule![allow_all])
+    .method("get_metadata", rule![allow_all])
+    .method("set_value", rule![require(admin_badge)])
+    .method("set_metadata", rule![require(admin_badge)])
+    .default(rule![deny_all]);
+```
+</CodeGroup>
+
+### Role-based Access
+
+Multiple badge types can gate different sets of methods.
+
+<CodeGroup>
+```rust Role-based Access
+let access_rules = ComponentAccessRules::new()
+    // Anyone can read
+    .method("get_balance", rule![allow_all])
+    // Users with the `user_badge` can deposit
+    .method("deposit", rule![require(user_badge)])
+    // Only admins can withdraw
+    .method("withdraw", rule![require(admin_badge)])
+    // Only super-admins can change the fee
+    .method("set_fee", rule![require(super_admin_badge)])
+    .default(rule![deny_all]);
+```
+</CodeGroup>
+
+### Multisig
+
+Require multiple parties to sign before a privileged action can execute.
+
+<CodeGroup>
+```rust Multisig Access Rule
+use tari_template_lib::prelude::*;
+
+// Require any 2 of 3 signers to call `emergency_withdraw`
+let multisig_rule = rule![m_of_n(
+    2,
+    public_key(signer_key_1),
+    public_key(signer_key_2),
+    public_key(signer_key_3)
+)];
+
+let access_rules = ComponentAccessRules::new()
+    .method("emergency_withdraw", multisig_rule)
+    .default(rule![deny_all]);
+```
+</CodeGroup>
+
+## Updating Access Rules at Runtime
+
+You can update a resource's access rules after creation using `ResourceManager::update_access_rule`. The engine checks the field's `UpdateRule` to decide whether the caller is permitted.
+
+<CodeGroup>
+```rust Updating an Access Rule
+use tari_template_lib::prelude::*;
+
+pub fn open_minting(&self) {
+    // This only succeeds if the field's UpdateRule permits the caller.
+    // If UpdateRule::Locked, this call always fails.
+    ResourceManager::get(self.token_address)
+        .update_access_rule(
+            ResourceAuthAction::Mint,
+            rule!(allow_all),
+        );
+}
+```
+</CodeGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Principle of Least Privilege" icon="shield">
+    Grant only the minimum permissions needed. Default to `deny_all` and explicitly open what should be public.
+  </Card>
+  <Card title="Lock Critical Rules" icon="lock">
+    Use `LOCKED` as the `UpdateRule` for mint, recall, and burn to give holders permanent guarantees about your token.
+  </Card>
+  <Card title="One-time Badges" icon="key">
+    For access rules that appear in condition trees or stealth outputs, use one-time derived keys rather than reusable account keys to avoid identity linkage.
+  </Card>
+  <Card title="Test Every Rule" icon="flask">
+    Use `execute_expect_failure` in your tests to verify that restricted methods are actually denied — don't just test the happy path.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Testing" icon="flask" href="/ootle/templates/testing">
+    Write tests that assert access-denied rejections with the TemplateTest harness.
+  </Card>
+  <Card title="Resources & Vaults" icon="box" href="/ootle/templates/resources-and-vaults">
+    Configure mint, burn, and recall rules when creating resources.
+  </Card>
+  <Card title="Build a Template" icon="hammer" href="/ootle/templates/build-a-template">
+    See ComponentAccessRules in action in the guessing game walkthrough.
+  </Card>
+  <Card title="API Overview" icon="book" href="/ootle/reference/api-overview">
+    Full reference for AccessRules, AccessRule, and the auth module.
+  </Card>
+</CardGroup>

@@ -1,0 +1,86 @@
+---
+title: "How Tari Works: Two Layers, One Protocol"
+sidebarTitle: "How It Works"
+description: "Understand Tari's dual-layer architecture: Layer 1 proof-of-work mining with XTM rewards and Layer 2 smart contracts powered by the Turbine Model."
+---
+
+Tari is a two-layer blockchain protocol designed to combine the security and decentralisation of proof-of-work mining with the flexibility of a programmable smart contract network. The two layers — Minotari and the Ootle — are economically and cryptographically linked, giving you a system where base-layer privacy and Layer 2 expressiveness reinforce each other rather than compete. This page walks you through how each layer works and the key mechanisms that tie them together.
+
+## Layer 1 — Minotari
+
+Minotari is Tari's proof-of-work base layer. It is responsible for issuing the **XTM token**, securing the network through mining, and providing the confidential transaction foundation that everything else is built on.
+
+### Mimblewimble Privacy
+
+Minotari uses the **Mimblewimble** protocol, which means transactions are confidential by default. Transaction amounts and addresses are not visible to outside observers on the blockchain. Unlike systems where you have to opt into privacy features, on Minotari you get confidentiality automatically with every transaction.
+
+### Four Mining Algorithms
+
+Minotari is unusual in that it runs **four independent mining lanes simultaneously**. Each lane uses a different proof-of-work algorithm and independently earns **25% of every block reward**:
+
+| Algorithm | Type | Notes |
+|---|---|---|
+| **RandomX Merge-Mined (RxM)** | CPU | Merge-mined alongside Monero — XTM miners can earn rewards on both networks at once |
+| **RandomX Tari-Native (RxT)** | CPU | A Tari-exclusive RandomX lane; not linked to Monero's chain |
+| **SHA3x** | GPU / ASIC | A SHA-3-based algorithm designed for GPU and specialised hardware |
+| **Cuckaroo (C29)** | GPU | A memory-hard Cuckoo Cycle variant tuned for GPU miners |
+
+Because each algorithm gets an equal share of block rewards, Minotari avoids giving any single hardware category a dominant economic advantage. This encourages a broader and more decentralised mining community.
+
+### Block Reward Emission
+
+Tari's block reward does **not** follow a Bitcoin-style halving schedule. Instead, rewards decay **block-by-block** via an exponential decay function, creating a smooth, continuous decline rather than dramatic step changes every four years. Roughly every three years the reward approximately halves, but the transition is gradual rather than sudden.
+
+After annual emissions drop to approximately **1% of the total XTM supply**, Minotari switches to a **perpetual 1% annual tail emission**. This tail emission ensures that miners always have an incentive to secure the network, even after the bulk of the initial supply has been distributed.
+
+## Layer 2 — The Ootle
+
+The Ootle is Tari's smart contract network. It gives you a programmable environment for building decentralised applications, managing digital assets, and executing complex on-chain logic — all backed by the security of Minotari's proof-of-work base layer.
+
+### The TARI Token
+
+The Ootle is powered by **TARI**, a separate token from XTM. The critical constraint is that **TARI can only be created by burning XTM on Layer 1 at a 1:1 ratio**. There is no independent issuance of TARI — every TARI in existence represents XTM that was permanently removed from the Minotari supply to create it.
+
+### The Turbine Model
+
+The economic relationship between XTM and TARI is governed by the **Turbine Model**:
+
+1. You burn XTM on Minotari to mint TARI on the Ootle at a 1:1 rate.
+2. A portion of every Ootle transaction fee is **burned**, permanently removing TARI from circulation.
+3. The **Throttle** algorithm monitors the state of both layers and dynamically adjusts the burn rate to maintain ecosystem stability and a soft 1:1 peg between XTM and TARI.
+
+This creates a continuous deflationary pressure on TARI tied directly to Ootle usage, and connects the health of the smart contract layer back to the base layer's token supply.
+
+## Emoji IDs
+
+Every Tari wallet has an **Emoji ID** — a human-readable wallet address represented as a sequence of emoji characters derived from your public key master seed.
+
+```
+Example Emoji ID:  😂👻😿🖐⛑🐙
+```
+
+Emoji IDs give you several practical advantages:
+
+- **Human-readable**: You can read them aloud or compare them visually far more reliably than a long hexadecimal string.
+- **Reusable**: You can share your Emoji ID publicly and receive multiple payments without exposing transaction history.
+- **Privacy-preserving**: The emoji sequence is derived from your public key using a deterministic process, so it does not reveal any additional information about your wallet beyond what a standard public key already conveys.
+
+## One-Sided Transactions
+
+Standard Mimblewimble requires both the sender and recipient to be online at the same time to interactively construct a transaction. Tari removes this constraint with **one-sided transactions**.
+
+When you send XTM to someone's Emoji ID, you can complete the entire transaction unilaterally — the recipient does not need to be online, watching the network, or even aware that you are sending them funds. Their wallet will detect and claim the incoming funds when it next connects to the network.
+
+This makes Tari's user experience much closer to how you would expect a payment system to work, without sacrificing the privacy properties that Mimblewimble provides.
+
+## The Tari DHT Network
+
+Tari nodes communicate over a **peer-to-peer network** built on a Kademlia-based **distributed hash table (DHT)**. This gives the network decentralised peer discovery and message routing without relying on any central coordination server.
+
+### Tor Integration
+
+To protect the network-level privacy of node operators and wallet users, Tari uses **Tor** by default. Each node communicates via a Tor hidden service, meaning its real IP address is not exposed to other participants on the network. Your activity on the Tari network does not reveal your physical location or internet service provider.
+
+<Note>
+  On **Linux and macOS**, Tor is embedded directly in the Tari binaries — you do not need to install or configure anything separately. On **Windows**, Tari requires a separately running Tor daemon. Make sure Tor is installed and running before starting your node or wallet on Windows.
+</Note>

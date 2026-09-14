@@ -1,0 +1,139 @@
+---
+title: "Process XTM Withdrawals from Your Exchange"
+sidebarTitle: "Withdrawals"
+description: "Validate withdrawal requests, access the cold storage wallet, and send one-sided XTM transactions with proper security and audit logging."
+---
+
+Every XTM withdrawal from your exchange is sent as a **one-sided transaction** — interactive addresses are not supported in this context because the recipient's wallet does not need to be online to receive funds. Your withdrawal pipeline runs in two stages: first, you validate and reserve funds for the request; then, once approved, your system connects to the cold storage wallet, broadcasts the transaction, and atomically finalises the database records. Access to the cold storage wallet is intentionally short-lived — you connect, transfer, and disconnect immediately.
+
+<Note>
+  The standard `fee_per_gram` is **25**. Estimate the total fee before finalising the withdrawal amount so that the net amount received by the user matches what they requested. Deduct the fee from the exchange's operational float rather than silently reducing the user's withdrawal.
+</Note>
+
+<Steps>
+
+### Validate the withdrawal request
+
+Perform all validation before touching the cold wallet. If any check fails, return an error immediately — no funds should be moved and no balance should be reserved.
+
+Run the following checks in order:
+
+1. **User authentication** — confirm the session is valid and the user is who they claim to be.
+2. **KYC status** — reject the request if the user is not verified, blocked, or has withdrawals suspended.
+3. **Amount checks** — the amount must be greater than zero and above your configured minimum withdrawal threshold.
+4. **Balance check** — confirm the user's available balance covers the withdrawal amount plus the estimated fee. If not, return an insufficient balance error.
+5. **Destination address format** — validate that the address is a well-formed Tari one-sided address. Reject any interactive address outright.
+6. **Blacklist check** — screen the destination address against your internal blacklist and any external watchlists.
+7. **Suspicious activity** — apply your fraud detection logic before proceeding.
+8. **Daily limits** — enforce per-user daily withdrawal limits based on KYC tier.
+
+If the amount exceeds your manual approval threshold, set `approvalRequired: true` and route the record to your operations queue instead of processing it immediately.
+
+When all checks pass:
+
+- **Reserve** the user's balance (amount + fee) so it cannot be spent by a concurrent request.
+- **Create a withdrawal record** in your database with `status: "pending_approval"`.
+- Return a `withdrawalId` to the caller so the user can track progress.
+
+### Process approved withdrawals
+
+This step runs after a withdrawal record has been approved (either automatically for small amounts or manually by your operations team). It is the only place in your system that connects to the cold storage wallet.
+
+**Connect and verify:**
+
+Connect to the cold storage wallet and confirm it is online and fully synced before proceeding. Check that its available balance covers `amount + fee`. If the balance is insufficient, alert your operations team and abort — do not attempt a partial transfer.
+
+**Construct the recipient object:**
+
+```json
+{
+  "address": "<DESTINATION_ADDRESS>",
+  "amount": 1000000,
+  "fee_per_gram": 25,
+  "payment_type": "ONE_SIDED",
+  "payment_id": "<withdrawalId>"
+}
+```
+
+The `payment_id` field here is your internal withdrawal ID, which creates a traceable link between the on-chain transaction and your database record.
+
+**Call `Transfer` on the cold wallet gRPC:**
+
+```bash
+grpcurl -plaintext -d '{
+  "recipients": [{
+    "address": "<DESTINATION_ADDRESS>",
+    "amount": 1000000,
+    "fee_per_gram": 25,
+    "payment_type": "ONE_SIDED",
+    "payment_id": "withdrawal-12345"
+  }]
+}' localhost:18143 tari.rpc.Wallet/Transfer
+```
+
+**Validate the response:**
+
+Inspect the first element of `response.results`. Check that `is_success` is `true` and extract `transaction_id`. If `is_success` is `false`, read `failure_message`, roll back (see Error Handling below), and stop.
+
+**Finalise atomically:**
+
+Inside a single database transaction:
+
+1. Update the withdrawal record status to `"completed"`.
+2. Store `transaction_id`, `excess_sig` (as the transaction hash), and `broadcast_time`.
+3. Deduct the reserved balance from the user's account.
+4. Write an audit log entry recording the operator, timestamp, amount, destination, and transaction ID.
+
+Then notify the user that the withdrawal has been submitted and provide an estimated confirmation time of 10–15 minutes.
+
+<Warning>
+  **Always disconnect from the cold wallet immediately after the transfer is complete**, even if an error occurs. The `finally` block of your processing function must call `coldWallet.disconnect()` unconditionally. Leaving an authenticated cold wallet connection open is a significant security exposure.
+</Warning>
+
+### Error handling
+
+If the `Transfer` call fails or any step after it throws an exception:
+
+1. **Roll back** the database transaction — do not partially update any records.
+2. Set the withdrawal status to `"failed"` and persist the error message.
+3. **Release the reserved balance** back to the user's available balance.
+4. Alert your operations team with full context (withdrawal ID, user, amount, error).
+5. Add the withdrawal to a retry queue for manual review and re-approval.
+
+Never silently swallow a withdrawal error. Every failure must produce an audit trail and a notification.
+
+</Steps>
+
+## Audit Logging
+
+Every processed withdrawal — successful or failed — must produce an immutable audit log entry. At minimum, capture:
+
+```json
+{
+  "action": "withdrawal_processed",
+  "withdrawalId": "withdrawal-12345",
+  "userId": "user123",
+  "amountXTM": 1.0,
+  "fee": 0.000025,
+  "destinationAddress": "<ADDRESS>",
+  "transactionId": "<TX_ID>",
+  "transactionHash": "<EXCESS_SIG>",
+  "processedBy": "operator@exchange.com",
+  "timestamp": "2025-06-01T12:00:00Z",
+  "outcome": "success"
+}
+```
+
+Retain audit logs in append-only storage with no delete capability. These records are critical for regulatory compliance and dispute resolution.
+
+## Address Validation Reference
+
+To check whether an address is interactive before sending, inspect the Features byte of the decoded address. The `INTERACTIVE` flag is bit 1 (value `0b0000_0010`). If this flag is set, reject the address — your cold wallet cannot complete the transfer without the recipient being online.
+
+| Feature flag | Bit value | Meaning                        |
+|--------------|-----------|-------------------------------|
+| ONE\_SIDED   | `0x01`    | Accepts one-sided transactions |
+| INTERACTIVE  | `0x02`    | Requires interactive exchange  |
+| PAYMENT\_ID  | `0x04`    | Address includes a Payment ID  |
+
+Only addresses with `ONE_SIDED` set (and `INTERACTIVE` cleared) should be accepted for withdrawals.

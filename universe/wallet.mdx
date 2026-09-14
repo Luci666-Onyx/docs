@@ -1,0 +1,118 @@
+---
+title: "Managing Your XTM in the Tari Universe Wallet"
+sidebarTitle: "Wallet"
+description: "The Tari Universe Wallet lets you send, receive, and track XTM earnings from mining. Available as a desktop app and on iOS and Android."
+---
+
+Every copy of Tari Universe comes with a built-in self-custody wallet. Your mining rewards flow directly into this wallet as you earn them — no separate account, no exchange, no third party involved. You hold your own keys, which means only you can access your XTM. This page explains how your wallet works, how to keep it safe, and how to send and receive XTM.
+
+## The Desktop Wallet
+
+When you install and launch Tari Universe for the first time, the app generates a brand-new XTM wallet for you automatically. This wallet is stored locally on your machine. Your mining rewards accumulate here in real time, and you can view your balance, transaction history, and current earnings directly in the Tari Universe interface.
+
+Because this is a **self-custody** wallet, there is no Tari company, server, or service that holds your funds on your behalf. You are in complete control — which also means that backing up your seed phrase is your responsibility.
+
+## The Mobile Wallet
+
+<CardGroup cols={2}>
+  <Card
+    title="iOS App Store"
+    icon="apple"
+    href="https://apps.apple.com/us/app/tari-aurora/id1503654828"
+  >
+    Download the Tari Universe Wallet for iPhone and iPad.
+  </Card>
+  <Card
+    title="Google Play"
+    icon="google-play"
+    href="https://play.google.com/store/apps/details?id=com.tari.android.wallet"
+  >
+    Download the Tari Universe Wallet for Android.
+  </Card>
+</CardGroup>
+
+The **Tari Universe Wallet** mobile app (available for iOS and Android) is a companion app that pairs with your desktop mining application. Once linked, it lets you:
+
+- Monitor your real-time mining earnings from your phone
+- View your full transaction history
+- Send and receive XTM on the go
+- Scan QR codes for quick payments
+
+The mobile wallet is also a self-custody wallet. It uses the same keys as your desktop wallet when paired, giving you a unified view of your XTM from any device.
+
+## Your Emoji ID
+
+Your Tari wallet address is called an **Emoji ID** — a unique, human-readable sequence of emoji that represents your public key. Instead of a long string of letters and numbers, your address looks something like:
+
+```
+🦊🌈🎸🍀🔮🦋🎯🌙🦄🎪🍕🔑🎨🌺🦁🎭🍦🌊🎪🦅🎸🌟🎯🔮
+```
+
+No two Emoji IDs are the same. When you share your Emoji ID with someone, they can send XTM directly to your wallet without needing to know your name, email, or any personal information.
+
+<Tip>
+  You can also share a **QR code** that encodes your Emoji ID. In the Tari Universe app, tap or click your wallet address to reveal your QR code, which can be scanned by anyone with the Tari Universe mobile wallet.
+</Tip>
+
+## Backing Up Your Seed Phrase
+
+Your wallet is protected by a **24-word BIP39 seed phrase** — a master backup of your private keys. If you ever lose your device, reinstall the app, or need to restore your wallet on a new machine, your seed phrase is the only way to recover your XTM.
+
+Tari Universe uses a **staged security prompt**: rather than overwhelming you with backup warnings the moment you install the app, the app will prompt you to write down your seed phrase once your balance reaches a meaningful amount. When that prompt appears, stop and complete the backup before continuing.
+
+**How to back up your seed phrase:**
+
+1. Open Tari Universe and navigate to **Settings → Wallet → Backup Seed Phrase**.
+2. The app will display your 24 words one at a time.
+3. Write them down — by hand, on paper — in the exact order shown.
+4. Store that paper somewhere safe and private (a fireproof safe is ideal).
+5. Never store your seed phrase digitally: not in a notes app, not in email, not in a screenshot.
+
+<Warning>
+  **Never share your seed phrase with anyone — ever.** No Tari team member, support agent, or community moderator will ever ask for your seed phrase. Anyone who does is attempting to steal your funds. If your seed phrase is compromised, your XTM can be taken immediately and irrecoverably.
+</Warning>
+
+## Sending XTM
+
+To send XTM to another person:
+
+1. Open Tari Universe and navigate to the **Send** section of your wallet.
+2. Enter the recipient's **Emoji ID** or scan their QR code.
+3. Enter the amount of XTM you want to send.
+4. Review the transaction details and confirm.
+
+Tari uses **one-sided transactions**, which means the recipient does not need to be online or have their wallet open at the time you send. The transaction is recorded on-chain and the recipient will see it the next time they sync their wallet.
+
+## Receiving XTM
+
+To receive XTM from someone else:
+
+1. Open Tari Universe and navigate to the **Receive** section.
+2. Share your **Emoji ID** or let the sender scan your **QR code**.
+3. The sender initiates the transaction from their wallet.
+4. Your balance updates once the transaction is confirmed on-chain (usually within a few minutes).
+
+## Testnet Wallets and Mainnet
+
+<Note>
+  If you participated in the original Tari Universe testnet, your old testnet seed phrase **cannot** be used for mainnet. Testnet XTM had no real-world value and the test network operated independently from mainnet. You must generate a fresh wallet when setting up Tari Universe for mainnet — the app will do this automatically on first launch.
+</Note>
+
+## Explore Further
+
+<CardGroup cols={2}>
+  <Card
+    title="Mining"
+    icon="pickaxe"
+    href="/universe/mining"
+  >
+    Learn how your XTM earnings are generated through proof-of-work mining.
+  </Card>
+  <Card
+    title="FAQ"
+    icon="circle-question"
+    href="/universe/faq"
+  >
+    Common questions about wallets, seed phrases, and keeping your XTM safe.
+  </Card>
+</CardGroup>

@@ -1,0 +1,359 @@
+---
+title: "Testing Ootle Templates with TemplateTest"
+sidebarTitle: "Testing"
+description: "Unit test your Ootle templates locally using the TemplateTest harness before deploying to the network. No live node connection required."
+---
+
+The `tari_template_test_tooling` crate provides a `TemplateTest` harness that compiles your template to WASM and runs transactions against it using the exact same execution engine that validator nodes use on the network. This means a passing test genuinely proves the engine accepted the transaction — not that a mock did. You can run your entire test suite with a simple `cargo test` and no live node connection.
+
+## Setup
+
+A template crate generated with `cargo generate` already includes `tari_template_test_tooling` as a dev dependency. If you're setting up a crate manually, add it yourself:
+
+```toml
+[dev-dependencies]
+tari_template_test_tooling = "0.39"
+```
+
+<Tip>
+  Template tests spend most of their time in the Cranelift WASM JIT, which compiles slowly in debug builds. Add the following profile overrides to your `Cargo.toml` to make tests run roughly **10x faster**:
+
+  ```toml
+  [profile.dev.package.wasmer]
+  opt-level = 2
+  [profile.dev.package.wasmer-compiler]
+  opt-level = 2
+  [profile.dev.package.wasmer-compiler-cranelift]
+  opt-level = 2
+  [profile.dev.package.cranelift-codegen]
+  opt-level = 2
+  [profile.dev.package.cranelift-frontend]
+  opt-level = 2
+  [profile.dev.package.cranelift-entity]
+  opt-level = 2
+  ```
+
+  The first build after adding these lines will take a little longer as Cargo recompiles the affected crates with optimizations. Subsequent builds will be fast.
+</Tip>
+
+## Basic Setup and Creating Accounts
+
+Use `TemplateTest::my_crate()` when the template under test is the crate you're testing. Use `TemplateTest::new(crate_path, [template_paths])` when the template lives elsewhere (for example, in a monorepo).
+
+`create_funded_account` generates a fresh key pair, publishes an account component, and funds it from the built-in faucet — everything you need to send transactions as a realistic user.
+
+<CodeGroup>
+```rust Basic Test Setup
+use tari_template_test_tooling::{
+    TemplateTest,
+    transaction::{args, Transaction},
+};
+
+#[test]
+fn test_my_template() {
+    // Use my_crate() when the template is the crate you're testing.
+    let mut test = TemplateTest::my_crate();
+
+    // Or load a template from another path:
+    // let mut test = TemplateTest::new(CRATE_PATH, ["path/to/template"]);
+
+    let template = test.get_template_address("MyComponent");
+
+    // Create a funded account: returns (component_address, ownership_proof, secret_key)
+    let (account, _proof, account_key) = test.create_funded_account();
+
+    // Deploy the component
+    let _result = test.execute_expect_success(
+        test.transaction()
+            .allocate_component_address("my_component")
+            .call_function(template, "new", args![Workspace("my_component"), 100u64])
+            .build_and_seal(test.secret_key()),
+        vec![],
+    );
+}
+```
+</CodeGroup>
+
+<Note>
+  Fees are disabled by default in `TemplateTest`. Call `test.enable_fees()` if the behavior you are testing depends on fee deduction.
+</Note>
+
+## Calling Functions and Methods
+
+Use `call_function` to invoke a constructor or a stateless function. Use `call_method` to invoke a method on an existing component.
+
+<CodeGroup>
+```rust Calling Functions and Methods
+#[test]
+fn test_counter() {
+    let mut test = TemplateTest::my_crate();
+    let template = test.get_template_address("Counter");
+
+    // Call the constructor (a template function)
+    let component_address: ComponentAddress = test.call_function(
+        "Counter",
+        "new",
+        args![0u64],
+        vec![], // proofs
+    );
+
+    // Call a method on the deployed component
+    let value: u64 = test.call_method(
+        component_address,
+        "get_value",
+        args![],
+        vec![],
+    );
+    assert_eq!(value, 0u64);
+
+    // Increment via a transaction
+    test.execute_expect_success(
+        test.transaction()
+            .call_method(component_address, "increment", args![5u64])
+            .build_and_seal(test.secret_key()),
+        vec![],
+    );
+
+    let new_value: u64 = test.call_method(component_address, "get_value", args![], vec![]);
+    assert_eq!(new_value, 5u64);
+}
+```
+</CodeGroup>
+
+## Proofs and the Authorization Scope
+
+The `proofs` argument to `execute_expect_success` and `execute_expect_failure` sets the transaction's **initial authorization scope** — the set of virtual badges that access rules are checked against.
+
+When you pass an empty vector, the harness automatically derives signer badges from the transaction's signing key (matching real network behavior). When you pass a non-empty vector, it replaces the derived badges — so pass the owner's badge explicitly if needed.
+
+<CodeGroup>
+```rust Authorization Tests
+#[test]
+fn test_access_rules() {
+    let mut test = TemplateTest::my_crate();
+    let template = test.get_template_address("GuessingGame");
+
+    let (player, _player_proof, player_key) = test.create_funded_account();
+
+    // Deploy and start a round — owner-only, sealed with the test's own key.
+    test.execute_expect_success(
+        test.transaction()
+            .allocate_component_address("game")
+            .call_function(template, "new", args![Workspace("game")])
+            .call_method("game", "start_game", args![NonFungibleId::from_string("💎")])
+            .build_and_seal(test.secret_key()),
+        vec![], // empty: harness derives signer badges automatically
+    );
+
+    let (game, _) = test
+        .read_only_state_store()
+        .get_components_by_template_address(template)
+        .unwrap()
+        .remove(0);
+
+    // Player calls `guess` — public method, player's own key is sufficient.
+    test.execute_expect_success(
+        test.transaction()
+            .call_method(game, "guess", args![5u8, player])
+            .build_and_seal(&player_key),
+        vec![], // empty: harness derives player's signer badge
+    );
+}
+```
+</CodeGroup>
+
+## Asserting on Rejected Transactions
+
+`execute_expect_failure` panics if the transaction *succeeds* and hands you the `RejectReason` if it fails. Use `assert_reject_reason` to verify the failure message comes from the rule you intended, not a setup mistake.
+
+<CodeGroup>
+```rust Testing Rejections
+use tari_template_test_tooling::support::assert_reject_reason;
+
+#[test]
+fn test_out_of_range_guess_is_rejected() {
+    let mut test = TemplateTest::my_crate();
+    let template = test.get_template_address("GuessingGame");
+
+    let (player, _proof, player_key) = test.create_funded_account();
+
+    // Set up the game
+    test.execute_expect_success(
+        test.transaction()
+            .allocate_component_address("game")
+            .call_function(template, "new", args![Workspace("game")])
+            .call_method("game", "start_game", args![NonFungibleId::from_string("🎲")])
+            .build_and_seal(test.secret_key()),
+        vec![],
+    );
+
+    let (game, _) = test
+        .read_only_state_store()
+        .get_components_by_template_address(template)
+        .unwrap()
+        .remove(0);
+
+    // Capture state before the attempt
+    let state_before = test.read_only_state_store().get_component(game).unwrap();
+
+    // Attempt an out-of-range guess — should be rejected
+    let reason = test.execute_expect_failure(
+        test.transaction()
+            .call_method(game, "guess", args![100u8, player])
+            .build_and_seal(&player_key),
+        vec![],
+    );
+
+    // Verify the failure message matches your template's panic
+    assert_reject_reason(reason, "Panic! Guess must be from 0 to 10");
+
+    // Verify no state was committed by the failed transaction
+    let state_after = test.read_only_state_store().get_component(game).unwrap();
+    assert_eq!(
+        state_after.state(),
+        state_before.state(),
+        "A rejected transaction must not commit state"
+    );
+}
+```
+</CodeGroup>
+
+<Note>
+  Always assert on the specific rejection message, not just that the transaction failed. A transaction rejected because the signing key was wrong, or because the caller had no funds, also satisfies `execute_expect_failure` — checking the message is what confirms your rule fired.
+</Note>
+
+## Reading Component State Directly
+
+Between transactions you can read component state directly from the store without submitting a transaction. State is encoded field by field, so path segments are field **indices** (starting at 0), not names.
+
+<CodeGroup>
+```rust Reading State
+#[test]
+fn test_state_inspection() {
+    let mut test = TemplateTest::my_crate();
+    let template = test.get_template_address("GuessingGame");
+
+    test.execute_expect_success(
+        test.transaction()
+            .allocate_component_address("game")
+            .call_function(template, "new", args![Workspace("game")])
+            .call_method("game", "start_game", args![NonFungibleId::from_string("🏆")])
+            .build_and_seal(test.secret_key()),
+        vec![],
+    );
+
+    let (game, _) = test
+        .read_only_state_store()
+        .get_components_by_template_address(template)
+        .unwrap()
+        .remove(0);
+
+    // GuessingGame struct: field 0 = prize_vault, field 1 = guesses, field 2 = round_number
+    // `$.2` reads the third field (round_number) — start_game incremented it to 1.
+    let round_number: u32 = test.extract_component_value(game, "$.2");
+    assert_eq!(round_number, 1);
+
+    // Read vaults for the component directly
+    let vaults = test.read_only_state_store()
+        .get_vaults_for_component(game)
+        .unwrap();
+    let prize_vault = vaults.values().next().expect("game has a prize vault");
+    assert_eq!(prize_vault.balance(), Amount::from(1u64));
+}
+```
+</CodeGroup>
+
+<Warning>
+  Path indices change when you reorder struct fields. `$.0` is always the first field, `$.2` is the third. Update your test paths if you refactor the component struct.
+</Warning>
+
+## Overriding the Epoch
+
+Templates can read the current epoch via `Consensus::current_epoch()`. The harness seeds it at `0` by default; use `set_virtual_substate` to override it for time-dependent logic.
+
+<CodeGroup>
+```rust Overriding the Epoch
+use tari_template_test_tooling::{
+    TemplateTest,
+    virtual_substate::{VirtualSubstate, VirtualSubstateId},
+};
+
+#[test]
+fn test_epoch_dependent_logic() {
+    let mut test = TemplateTest::my_crate();
+
+    // Default epoch is 0
+    let epoch: u64 = test.call_function("MyTemplate", "current_epoch", args![], vec![]);
+    assert_eq!(epoch, 0);
+
+    // Override the epoch to 42
+    test.set_virtual_substate(
+        VirtualSubstateId::CurrentEpoch,
+        VirtualSubstate::CurrentEpoch(42),
+    );
+
+    let epoch: u64 = test.call_function("MyTemplate", "current_epoch", args![], vec![]);
+    assert_eq!(epoch, 42);
+}
+```
+</CodeGroup>
+
+## Running Tests
+
+Run your full test suite from the template crate directory:
+
+```bash
+cargo test
+```
+
+Run a specific test by name:
+
+```bash
+cargo test test_out_of_range_guess_is_rejected
+```
+
+Run tests with output printed (useful for debugging):
+
+```bash
+cargo test -- --nocapture
+```
+
+Use `test.print_state()` inside a test to dump the full execution state when you need to understand what a transaction actually did.
+
+<Tip>
+  Always test your templates thoroughly before publishing. Deploying a buggy template costs real TARI in gas fees, and templates cannot be modified after publication — you would need to publish a new version.
+</Tip>
+
+## Integration Testing on Testnet
+
+Once your unit tests pass, you can test against the live Esmeralda testnet before committing to mainnet:
+
+```bash
+# Start the wallet daemon connected to testnet
+tari_ootle_walletd --network esme
+
+# Build your template
+cargo build --target wasm32-unknown-unknown --release
+
+# Publish to testnet
+tari publish -e network=esme
+```
+
+After publishing, call your template's constructor and methods using the wallet CLI or the [Tari SDK](/ootle/reference/api-overview) to verify end-to-end behavior under real network conditions.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Publishing" icon="upload" href="/ootle/publishing">
+    Publish your tested template to the Tari network.
+  </Card>
+  <Card title="Access Control" icon="lock" href="/ootle/templates/access-control">
+    Learn how to write tests that assert access-denied rejections.
+  </Card>
+  <Card title="Build a Template" icon="hammer" href="/ootle/templates/build-a-template">
+    See a complete test suite for the guessing game template.
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/ootle/cli">
+    Use the CLI to scaffold, build, and publish templates.
+  </Card>
+</CardGroup>

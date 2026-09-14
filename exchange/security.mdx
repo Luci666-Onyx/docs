@@ -1,0 +1,217 @@
+---
+title: "Security Best Practices for Minotari Exchange Operations"
+sidebarTitle: "Security"
+description: "Protect user funds with defense-in-depth security: network isolation, wallet separation, multi-sig, encryption, and real-time monitoring."
+---
+
+Running a cryptocurrency exchange demands a defense-in-depth approach to security. A single misconfigured firewall rule or a weak credential can put every user's funds at risk. This page consolidates the most important security measures for a Minotari exchange integration, organized by layer. Treat each section as a checklist — not a suggestion — before you go live on Mainnet.
+
+<Warning>
+  Never hardcode credentials, API keys, seed phrases, or wallet passwords in source code, Docker Compose files, or configuration files committed to version control. Use environment variables, a secrets manager (e.g., HashiCorp Vault, AWS Secrets Manager), or encrypted configuration at rest. A leaked credential or seed phrase provides unconditional access to funds.
+</Warning>
+
+---
+
+## Network Security
+
+The most impactful single security measure is ensuring your gRPC ports are never reachable from outside the machine they run on.
+
+### Firewall Rules
+
+Apply the following rules at both the host firewall (`ufw`, `iptables`) and any cloud security group or network ACL:
+
+```bash
+# Allow P2P traffic from trusted Tari network peers only
+ufw allow from trusted_peer_ip to any port 18141 proto tcp
+
+# Allow gRPC access from localhost ONLY — never from external addresses
+ufw allow from 127.0.0.1 to any port 18142 proto tcp   # Base node gRPC
+ufw allow from 127.0.0.1 to any port 18143 proto tcp   # Wallet gRPC
+
+# Deny everything else
+ufw default deny incoming
+ufw default allow outgoing
+```
+
+<Note>
+  If your exchange application and Tari processes run on separate hosts, tunnel gRPC traffic over an authenticated encrypted channel — a WireGuard VPN, mutual-TLS sidecar, or SSH port forward. Do **not** open ports `18142` or `18143` to any network interface other than loopback.
+</Note>
+
+### TLS for gRPC Connections
+
+For production deployments where the exchange application and the wallet gRPC server are on different machines, use TLS:
+
+```javascript
+// Node.js example: connect to wallet gRPC with TLS and client certificate
+const fs = require('fs');
+const grpc = require('@grpc/grpc-js');
+
+const rootCert = fs.readFileSync('path/to/ca.crt');
+const credentials = grpc.credentials.createSsl(rootCert);
+
+const client = new walletProto('wallet-host:18143', credentials);
+```
+
+Use TLS 1.3 as the minimum acceptable version. Reject connections that offer TLS 1.2 or earlier.
+
+---
+
+## Wallet Separation
+
+Keeping hot and cold wallets strictly separated limits the blast radius of any single compromise.
+
+### Hot Wallet Limits
+
+Your monitoring wallet is internet-connected and therefore has a broader attack surface. Treat it accordingly:
+
+- Keep the **hot wallet balance at or below 1% of total exchange funds** at all times
+- Set a maximum daily withdrawal limit enforced at the application layer — amounts above the threshold must go through the cold wallet flow
+- Enable real-time balance monitoring with alerts when balance drops below or rises above configured thresholds
+
+### Cold Storage Requirements
+
+The cold storage wallet must be treated as the highest-value asset in your infrastructure:
+
+| Requirement | Detail |
+|---|---|
+| **Air-gapped hardware** | The machine that holds spend keys must never have an active internet connection during normal operation |
+| **Multi-signature scheme** | Use a 3-of-5 multi-signature arrangement so that no single person or machine can authorize withdrawals unilaterally |
+| **Hardware Security Module (HSM)** | Where possible, use an HSM to store private key material rather than keeping keys on a general-purpose filesystem |
+| **Physical access controls** | The cold wallet machine should be in a locked, access-logged, camera-monitored location |
+| **Dual-operator verification** | Any withdrawal from cold storage should require sign-off from two independent authorized operators |
+
+---
+
+## Authentication
+
+### Admin and Operator Accounts
+
+- **Admin accounts** (infrastructure access, node management): require **hardware security keys** (FIDO2/WebAuthn). Software-based MFA (TOTP) is the minimum acceptable fallback.
+- **Operator accounts** (withdrawal approval, monitoring dashboards): require **TOTP** (Time-based One-Time Password) via an authenticator app.
+- **Enforce account lockout** after 3 consecutive failed login attempts. Alert the security team immediately on lockout.
+
+### API Access
+
+- Use **JWT (JSON Web Tokens)** for your exchange API with short-lived access tokens and rotating refresh tokens.
+- Rotate refresh tokens on every use (refresh token rotation).
+- Revoke all tokens immediately when a user changes their password or when suspicious activity is detected.
+
+### gRPC Authentication
+
+Enable basic authentication on your wallet gRPC endpoint to prevent unauthorized local processes from calling it:
+
+```toml
+# In config.toml under [wallet]
+grpc_authentication = { username = "exchange_monitor", password = "your_strong_password_here" }
+```
+
+Configure your exchange application to supply these credentials on every call:
+
+```javascript
+// Node.js: attach credentials to every gRPC call
+const metadata = new grpc.Metadata();
+metadata.add('username', process.env.GRPC_USERNAME);
+metadata.add('password', process.env.GRPC_PASSWORD);
+
+const callCredentials = grpc.credentials.createFromMetadataGenerator((_, callback) => {
+  callback(null, metadata);
+});
+```
+
+---
+
+## Data Protection
+
+All sensitive data at rest and in transit must be encrypted.
+
+| Data Category | Protection Requirement |
+|---|---|
+| **Private keys and seed phrases** | AES-256-GCM encryption at rest; never in plaintext on disk |
+| **Exchange database** | Transparent Data Encryption (TDE) enabled; encrypted backups |
+| **Backup media** | Encrypted before leaving the premises; keys stored separately from backups |
+| **All network connections** | TLS 1.3 minimum for all connections between exchange services |
+| **Audit logs** | Write-once, append-only storage; tamper-evident hashing |
+
+<Note>
+  Database backups should be encrypted with a key that is **separate** from the database encryption key. Storing both on the same system defeats the purpose of encryption-at-rest.
+</Note>
+
+---
+
+## Monitoring and Alerting
+
+### Real-Time Alerts
+
+Configure immediate alerts for the following events:
+
+- **3 or more consecutive failed login attempts** on any account
+- **Any withdrawal request above your manual-approval threshold** (see Withdrawal Security below)
+- **Hot wallet balance** drops below your reserve floor or rises above your ceiling
+- **Base node loses peer connectivity** (fewer than 2 connected peers)
+- **Monitoring wallet falls behind** chain tip by more than a configurable number of blocks
+- **gRPC service unavailability** on either port `18142` or `18143`
+
+### Anomaly Detection
+
+For higher-value deployments, integrate ML-based anomaly detection on transaction patterns:
+
+- Flag deposits or withdrawals that deviate significantly from a user's historical behavior
+- Alert on unusual clustering of withdrawal requests (possible coordinated attack)
+- Detect velocity attacks — many small withdrawals from the same account in a short window
+
+### 24/7 System Health Monitoring
+
+All critical Tari processes should be monitored continuously:
+
+```bash
+# Example: check node sync health (run on a schedule via cron or monitoring agent)
+SYNC_INFO=$(grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetSyncInfo 2>/dev/null)
+if [ $? -ne 0 ]; then
+  echo "ALERT: Base node gRPC unreachable" | alert_channel
+fi
+
+# Check wallet connectivity
+WALLET_STATE=$(grpcurl -plaintext localhost:18143 tari.rpc.Wallet/GetState 2>/dev/null)
+if [ $? -ne 0 ]; then
+  echo "ALERT: Wallet gRPC unreachable" | alert_channel
+fi
+```
+
+---
+
+## Withdrawal Security
+
+Withdrawals are the highest-risk operation in an exchange. Apply multiple independent controls:
+
+### Validation Layers
+
+Every withdrawal request must pass all of the following checks before it is queued for processing:
+
+1. **User authentication and KYC status** — only verified users may withdraw
+2. **Destination address validation** — must be a valid Tari one-sided address (not an interactive address)
+3. **Blacklist check** — destination address must not appear on any known sanctions or risk list
+4. **Sufficient balance check** — user balance must cover amount plus estimated fee
+5. **Rate limiting** — limit the number of withdrawal requests per user per hour
+6. **Daily limit by KYC level** — higher KYC tiers unlock higher daily withdrawal limits
+7. **Suspicious activity detection** — flag and hold requests that match anomaly patterns
+
+### Manual Approval Threshold
+
+Set a monetary threshold above which every withdrawal requires explicit approval from two independent operators before it is processed. Log all approvals with operator identity, timestamp, and justification.
+
+### Interactive Address Rejection
+
+Never allow users to withdraw to an interactive Tari address. You can detect interactive addresses by inspecting the features byte of the address — an interactive address has bit 1 set (hex `0x02`). Reject any address with this flag:
+
+```
+// Features byte breakdown:
+// 0b0000_0001 = ONE_SIDED
+// 0b0000_0010 = INTERACTIVE  ← reject these
+// 0b0000_0100 = PAYMENT_ID
+```
+
+Exchanges should only send one-sided (non-interactive) transactions so that recipients do not need to be online to receive funds.
+
+### Confirmation Requirements
+
+Wait for a minimum of **6 block confirmations** before considering a withdrawal final and releasing any hold on reserves. This provides adequate protection against chain reorganizations.

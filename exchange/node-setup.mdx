@@ -1,0 +1,150 @@
+---
+title: "Set Up a Minotari Base Node for Your Exchange"
+sidebarTitle: "Node Setup"
+description: "Install and configure a Minotari base node for exchange operations. Covers binary installation, first run, network selection, and gRPC setup."
+---
+
+The Minotari base node is the foundation of your exchange integration. It syncs the full Tari blockchain, validates blocks and transactions, and exposes chain data to your application through a gRPC API. This page walks you through installing the node binaries, running the node for the first time, and verifying that gRPC is working correctly.
+
+<Warning>
+  In production, always pin to a specific version tag when pulling Docker images or downloading binaries — do **not** use `latest`. Using `latest` risks unintentional upgrades that could introduce breaking changes to your integration. Track the [Tari releases page](https://github.com/tari-project/tari/releases) and upgrade deliberately.
+</Warning>
+
+## Prerequisites
+
+Before you start, ensure your server meets the following requirements:
+
+- **Operating system:** Linux Ubuntu 20.04 or later (recommended); macOS 10.15+ and Windows 10+ are also supported
+- **Storage:** 50 GB+ SSD (the blockchain grows over time; provision headroom)
+- **RAM:** 4 GB minimum, 8 GB+ recommended
+- **Network:** Stable internet connection with consistent uptime
+- **Tor or public IP:** On Linux, the Minotari binaries include built-in Tor support. On other platforms, either install a Tor client or configure your server's public IP address so that other nodes can reach you. See the [Tari network configuration docs](https://github.com/tari-project/tari/discussions/6366) for details.
+
+**Firewall ports to open before starting:**
+
+| Port | Protocol | Direction | Purpose |
+|---|---|---|---|
+| `18141` | TCP | Inbound from trusted peers | P2P network traffic |
+| `18142` | TCP | Localhost only | gRPC API |
+
+<Steps>
+
+### Download the Minotari binaries
+
+Download the pre-compiled release binaries for your platform from [tari.com/downloads](https://tari.com/downloads) or directly from the [GitHub releases page](https://github.com/tari-project/tari/releases).
+
+On Linux, the install sequence is:
+
+```bash
+# Download the latest release archive (replace the URL with the specific version you want)
+curl -L https://github.com/tari-project/tari/releases/latest/download/minotari-linux-x86_64.tar.gz \
+  -o minotari.tar.gz
+
+# Extract the archive
+tar -xzf minotari.tar.gz
+
+# Move the binaries to a location on your PATH
+sudo mv minotari_node minotari_console_wallet /usr/local/bin/
+
+# Verify the installation
+minotari_node --version
+```
+
+You should see output similar to:
+
+```
+minotari_node 1.x.x
+```
+
+If you prefer to build from source, follow the [build instructions in the Tari repository](https://github.com/tari-project/tari#building-from-source).
+
+### Initialize the node
+
+Start the node for the first time. If no configuration file exists, the node will create one and prompt you with a short setup wizard.
+
+```bash
+minotari_node
+```
+
+When prompted:
+
+- **"Would you like to mine?"** — Answer **`n`**. Exchange nodes should not mine; enabling mining exposes additional gRPC methods that are not needed and increases your attack surface.
+- **"Would you like to create a node identity?"** — Answer **`y`**. This generates a public/private key pair that uniquely identifies your node on the network. The identity is stored in your configuration directory (`~/.tari` by default on Linux).
+
+Once the node boots, it will display a status view and enter its command mode.
+
+### Save your node identity
+
+In the command mode prompt, run:
+
+```bash
+whoami
+```
+
+The node prints your **Public Key**, **Node ID**, and **Public Address** — for example:
+
+```
+Public Key: 90f67a04edcb36261e6304ca213629d183c44e26bd47e38c253473f44d901733
+Node ID: e8ed9a4fd38577b6b01e3b8e9d
+Public Addresses: /onion3/f5qbkkfkoxowzvshe5mppzpgiiy76cwumpsacungeldoal6hehcgzfqd:18141
+```
+
+Copy this output to a secure location. You will need the **Public Key** and **Public Address** when configuring wallets and any peer nodes that need to connect to this node.
+
+### Verify gRPC is running
+
+Open a second terminal and test the gRPC endpoint using `grpcurl`:
+
+```bash
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetVersion
+```
+
+A successful response looks like:
+
+```json
+{
+  "value": "1.x.x"
+}
+```
+
+If this call fails, check that:
+1. The node process is still running.
+2. gRPC is enabled in your config (`~/.tari/mainnet/config/config.toml`). Look for `grpc_enabled = true` and `grpc_address = "/ip4/127.0.0.1/tcp/18142"` under the `[base_node]` section.
+
+### Monitor sync status
+
+Your node needs to fully sync the blockchain before your exchange can rely on it. Track progress with:
+
+```bash
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetSyncInfo
+```
+
+The response includes `local_height` (how many blocks your node has) and the network tip height. Once `local_height` matches the network tip and `initial_sync_achieved` returns `true`, your node is ready.
+
+```bash
+# You can also check the overall tip and sync state together:
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/GetTipInfo
+```
+
+<Note>
+  Initial sync can take several hours depending on your hardware and network speed. During this time, the node is downloading and validating the full chain history. Do not start your wallet or exchange application against this node until sync is complete.
+</Note>
+
+To check the number of connected peers (you need at least a few for reliable operation):
+
+```bash
+grpcurl -plaintext localhost:18142 tari.rpc.BaseNode/ListConnectedPeers
+```
+
+</Steps>
+
+## Port Reference
+
+| Port | Protocol | Binding | Description |
+|---|---|---|---|
+| `18141` | TCP | Public (or Tor) | Peer-to-peer network communication |
+| `18142` | TCP | `127.0.0.1` only | gRPC API for exchange application |
+
+## Running Multiple Nodes
+
+For exchange-grade availability, run at least two base nodes and configure your monitoring wallet with both as peers. If the primary node goes offline, the wallet will fall back to the secondary automatically. See the [Architecture page](/exchange/architecture) for the recommended topology.
