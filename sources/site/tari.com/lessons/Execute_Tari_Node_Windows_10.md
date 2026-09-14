@@ -1,5 +1,5 @@
 ---
-title: "Execute Tari Node Windows on 10"
+title: "Execute Tari Node on Windows 10"
 ---
 
 By Blue. Edited by Natasha Haripersad.
