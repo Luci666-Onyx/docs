@@ -173,7 +173,8 @@
   },
   "styling": {
     "eyebrows": "section",
-    "latex": true
+    "latex": true,
+    "codeblocks": "system"
   },
   "banner": {
     "content": "Ootle Live 11/11/2026",
@@ -182,5 +183,8 @@
     "color": {
       "dark": "#9906b0"
     }
+  },
+  "seo": {
+    "indexing": "all"
   }
 }
