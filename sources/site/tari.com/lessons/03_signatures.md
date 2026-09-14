@@ -1,20 +1,6 @@
-# Source: https://tari.com/lessons/03_signatures
-
-About TariBuildCommunity
-
-active miners
-
-[Download](https://tari.com/downloads)
-
-About TariBuildCommunity
-
-active miners
-
-[Download](https://tari.com/downloads)
-
-active miners
-
-[< Back to lessons](https://tari.com/lessons)![Signing a Message](https://tari.com/assets/lessons/img/learn-signing-a-message.png)
+---
+title: "03_signatures"
+---
 
 # Signing a Message
 
@@ -90,9 +76,3 @@ msg: `Hello, Bob.`
 sig: `97938897220dcff9016af881d547d1ba1ef07b8465b1885f183c3872e142f40e`, `8e1cfbb2973d9d5b52e84816a78f6adc876b91d31cde7ea9cd16f1093927be4a`
 The message is signed by Alice
 ```
-
-![How Tari Works - Part I](https://tari.com/assets/lessons/img/learn-how-tari-works.png)[How Tari Works - Part I](https://tari.com/lessons/02_how_tari_works) [Read More](https://tari.com/lessons/02_how_tari_works)
-
-![Introduction to Keys](https://tari.com/assets/lessons/img/learn-intro-to-keys.png)[Introduction to Keys](https://tari.com/lessons/01_keys) [Read More](https://tari.com/lessons/01_keys)
-
-![Learning the Tari Codebase](https://tari.com/assets/lessons/img/learn-the-tari-codebase.png)[Learning the Tari Codebase](https://tari.com/lessons/00_introduction) [Read More](https://tari.com/lessons/00_introduction)

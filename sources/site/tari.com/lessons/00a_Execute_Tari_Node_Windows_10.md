@@ -1,3 +1,7 @@
+---
+title: "00a_Execute_Tari_Node_Windows_10"
+---
+
 # How to run a Tari Node on Windows 10
 
 By Blue. Edited by Natasha Haripersad.
@@ -117,14 +121,8 @@ Inside of the ".tari-testnet" folder, there is a folder called "config". Inside 
 
 Make sure you save your config file before closing it if you made any changes to it.
 
-Inside of the ".tari-testnet" folder, there is a folder called "runtime". Inside of that folder, there is a batch file called "start\_tari\_basenode". Run it. You will soon be asked a question. "Logging configuration file does not exist. Would you like to create a new one (Y/n)?" Type Y and press enter.
+Inside of the ".tari-testnet" folder, there is a folder called "runtime". Inside of that folder, there is a batch file called "start\_tari\_basenode". Run it. You will soon be asked a question. "Logging configuration file does not exist. Would you like to create a new one (Y/n)?" Type Y and press Enter.
 
 ![Downloads Lesson Graphic](https://tari.com/assets/lessons/img/running-tari.png)
 
 You are now connected to the Tari network! If you use the list-peers command you will see your connections to other nodes. Once your node is done syncing it will start mining. You can use the toggle-mining command to change this.
-
-![Adding Tari to Your Exchange](https://tari.com/assets/lessons/img/placeholder-thumbnail.jpg)[Adding Tari to Your Exchange](https://tari.com/lessons/09_adding_tari_to_your_exchange) [Read More](https://tari.com/lessons/09_adding_tari_to_your_exchange)
-
-![Setting Up Your Development Environment](https://tari.com/assets/lessons/img/learn-the-tari-codebase.png)[Setting Up Your Development Environment](https://tari.com/lessons/08_setting_up_development_environment) [Read More](https://tari.com/lessons/08_setting_up_development_environment)
-
-![Guide for adding new languages to the Tari Universe project](https://tari.com/assets/lessons/img/learn-the-tari-codebase.png)[Guide for adding new languages to the Tari Universe project](https://tari.com/lessons/07_add_new_localizations) [Read More](https://tari.com/lessons/07_add_new_localizations)

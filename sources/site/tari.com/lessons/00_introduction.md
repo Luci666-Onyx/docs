@@ -1,3 +1,7 @@
+---
+title: "00_introduction"
+---
+
 # Learning the Tari Codebase
 
 By Cayle Sharrock
@@ -25,9 +29,3 @@ Finally, you can copy your masterpieces to the clipboard with the Copy button.
 Happy coding!
 
 \[^1\]: Almost anything. The code must compile within a minute, and there are no networking features supported.
-
-![How to run a Tari Node on Windows 10](https://tari.com/assets/lessons/img/learn-how-tari-works-2.png)[How to run a Tari Node on Windows 10](https://tari.com/lessons/00a_Execute_Tari_Node_Windows_10) [Read More](https://tari.com/lessons/00a_Execute_Tari_Node_Windows_10)
-
-![Adding Tari to Your Exchange](https://tari.com/assets/lessons/img/placeholder-thumbnail.jpg)[Adding Tari to Your Exchange](https://tari.com/lessons/09_adding_tari_to_your_exchange) [Read More](https://tari.com/lessons/09_adding_tari_to_your_exchange)
-
-![Setting Up Your Development Environment](https://tari.com/assets/lessons/img/learn-the-tari-codebase.png)[Setting Up Your Development Environment](https://tari.com/lessons/08_setting_up_development_environment) [Read More](https://tari.com/lessons/08_setting_up_development_environment)

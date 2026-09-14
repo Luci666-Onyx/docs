@@ -1,28 +1,14 @@
-# Source: https://tari.com/lessons/06_tari_comms_i
-
-About TariBuildCommunity
-
-active miners
-
-[Download](https://tari.com/downloads)
-
-About TariBuildCommunity
-
-active miners
-
-[Download](https://tari.com/downloads)
-
-active miners
-
-[< Back to lessons](https://tari.com/lessons)![Tari Comms - An In-depth Introduction](https://tari.com/assets/lessons/img/learn-how-tari-works.png)
+---
+title: "06_tari_comms_i"
+---
 
 # Tari Comms - An In-depth Introduction
 
 By Stanley Bondi
 
-In this first lesson we will shed some light on the distributed peer-to-peer (p2p) networking crate [`tari_comms`](https://crates.io/crates/tari_comms/) and do a deeper dive into what makes it tick.
+In this first lesson, we will shed some light on the distributed peer-to-peer (p2p) networking crate `tari_comms` and do a deeper dive into what makes it tick.
 
-Some of the higher level architecture has already been covered in [How Tari Works - Part I](https://tari.com/lessons/02_how_tari_works.html), so be sure to give that a read if you haven't already.
+Some of the higher-level architecture has already been covered in [How Tari Works - Part I](https://tari.com/lessons/02_how_tari_works.html), so be sure to give that a read if you haven't already.
 
 In this lesson we'll discuss:
 
@@ -49,7 +35,7 @@ It provides interfaces that allow for peer discovery and message propagation, as
 
 The `tari_comms` crate makes use of these wonderful technologies:
 
-- TCP, Tor and SOCKS5 transports for reliable communcation,
+- TCP, Tor and SOCKS5 transports for reliable communication,
 - [`Multiaddr`](https://multiformats.io/multiaddr/) for self-describing and future-proof addressing of peers,
 - the [noise protocol](https://noiseprotocol.org/noise.html) for encrypted peer connections and authentication,
 - [`yamux`](https://github.com/hashicorp/yamux/blob/master/spec.md) for multiplexed communication over a single transport-level connection,
@@ -61,7 +47,7 @@ The `tari_comms` crate makes use of these wonderful technologies:
 
 The first point of contact to the `tari_comms` crate is the `CommsBuilder` struct. This struct is an example of the commonly used [builder pattern](https://doc.rust-lang.org/1.0.0/style/ownership/builders.html).
 
-The following is an example of constructing a comms node to illustrate what is required. A bit more work needs to be done to make this example work. If you would like to experiment with a working example, checkout the tari repo and look in the examples folder in `comms/`.
+The following is an example of constructing a comms node to illustrate what is required. A bit more work needs to be done to make this example work. If you would like to experiment with a working example, check out the tari repo and look in the examples folder in `comms/`.
 
 ```
 use tari_comms::CommsBuilder;
@@ -245,9 +231,3 @@ Framing is loosely-defined as a container for a payload of data. There are many 
 `tari_comms` has many features required to build a peer-to-peer network, so why not give it a try and let the community know what you think! If you're a more hands-on individual and would like to contribute to `tari_comms` or the Tari codebase in general, the [good first issue](https://github.com/tari-project/tari/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) label on the Tari github repo is a good place to start.
 
 Look out for the next post on the still-evolving Tari DHT crate.
-
-![Working with Emoji Id](https://tari.com/assets/lessons/img/learn-emoji-id.png)[Working with Emoji Id](https://tari.com/lessons/05_emoji_id) [Read More](https://tari.com/lessons/05_emoji_id)
-
-![How Tari Works - Part II](https://tari.com/assets/lessons/img/learn-how-tari-works-2.png)[How Tari Works - Part II](https://tari.com/lessons/04_how_tari_works_ii) [Read More](https://tari.com/lessons/04_how_tari_works_ii)
-
-![Signing a Message](https://tari.com/assets/lessons/img/learn-signing-a-message.png)[Signing a Message](https://tari.com/lessons/03_signatures) [Read More](https://tari.com/lessons/03_signatures)

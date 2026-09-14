@@ -1,20 +1,6 @@
-# Source: https://tari.com/lessons/02_how_tari_works
-
-About TariBuildCommunity
-
-active miners
-
-[Download](https://tari.com/downloads)
-
-About TariBuildCommunity
-
-active miners
-
-[Download](https://tari.com/downloads)
-
-active miners
-
-[< Back to lessons](https://tari.com/lessons)![How Tari Works - Part I](https://tari.com/assets/lessons/img/learn-how-tari-works.png)
+---
+title: "02_how_tari_works"
+---
 
 # How Tari Works - Part I
 
@@ -122,9 +108,3 @@ For Tari, we believe that the staged approach to security is better from _both_ 
 \[^4\]: But we have some pretty exciting ideas on how this can change in the future.
 
 \[^5\]: The current testnet version of Tari Aurora does not have the staged security process. This feature is planned ahead of the mainnet release version.
-
-![Introduction to Keys](https://tari.com/assets/lessons/img/learn-intro-to-keys.png)[Introduction to Keys](https://tari.com/lessons/01_keys) [Read More](https://tari.com/lessons/01_keys)
-
-![Learning the Tari Codebase](https://tari.com/assets/lessons/img/learn-the-tari-codebase.png)[Learning the Tari Codebase](https://tari.com/lessons/00_introduction) [Read More](https://tari.com/lessons/00_introduction)
-
-![How to run a Tari Node on Windows 10](https://tari.com/assets/lessons/img/learn-how-tari-works-2.png)[How to run a Tari Node on Windows 10](https://tari.com/lessons/00a_Execute_Tari_Node_Windows_10) [Read More](https://tari.com/lessons/00a_Execute_Tari_Node_Windows_10)
