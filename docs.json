@@ -172,7 +172,8 @@
     "timestamp": false
   },
   "styling": {
-    "eyebrows": "breadcrumbs"
+    "eyebrows": "section",
+    "latex": true
   },
   "banner": {
     "content": "Ootle Live 11/11/2026",
