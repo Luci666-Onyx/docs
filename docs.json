@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "name": "Tari",
-  "theme": "luma",
+  "theme": "mint",
   "favicon": {
     "light": "/images/Tari-White.svg",
     "dark": "/images/Tari-Black.svg"
