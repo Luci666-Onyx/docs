@@ -1,21 +1,3 @@
-# Source: https://tari.com/lessons/00a_Execute_Tari_Node_Windows_10
-
-About TariBuildCommunity
-
-active miners
-
-[Download](https://tari.com/downloads)
-
-About TariBuildCommunity
-
-active miners
-
-[Download](https://tari.com/downloads)
-
-active miners
-
-[< Back to lessons](https://tari.com/lessons)![How to run a Tari Node on Windows 10](https://tari.com/assets/lessons/img/learn-how-tari-works-2.png)
-
 # How to run a Tari Node on Windows 10
 
 By Blue. Edited by Natasha Haripersad.

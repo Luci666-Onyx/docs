@@ -1,30 +1,12 @@
-# Source: https://tari.com/lessons/00_introduction
-
-About TariBuildCommunity
-
-active miners
-
-[Download](https://tari.com/downloads)
-
-About TariBuildCommunity
-
-active miners
-
-[Download](https://tari.com/downloads)
-
-active miners
-
-[< Back to lessons](https://tari.com/lessons)![Learning the Tari Codebase](https://tari.com/assets/lessons/img/learn-the-tari-codebase.png)
-
 # Learning the Tari Codebase
 
 By Cayle Sharrock
 
 We're so excited that you want to help make Tari even better. We also realise that blockchain codebases can be pretty intimidating. This is where this blog comes in.
 
-The articles in this blog are aimed squarely at developers that want to get involved with the project, but don't know where to start.
+The articles in this blog are aimed squarely at developers who want to get involved with the project, but don't know where to start.
 
-The articles here are reasonably technical, and cover different parts of the Tari codebase. There are also executable sections of code that let you play with the Tari modules without even having to leave your browser.
+The articles here are reasonably technical and cover different parts of the Tari codebase. There are also executable sections of code that let you play with the Tari modules without even having to leave your browser.
 
 Click the ▶️ button in the top-right corner of the code snippets and wait for the result.
 
@@ -34,15 +16,15 @@ fn main() {
 }
 ```
 
-The code is completely editable too, so go ahead and try some Rust code out! We've included the top 100 crates as well as all the Tari crates into the virtual machine so you can run almost\[^1\] anything you like.
+The code is completely editable too, so go ahead and try some Rust code out! We've included the top 100 crates as well as all the Tari crates in the virtual machine so you can run almost\[^1\] anything you like.
 
-If you mess up, not to worry! The ⟲ icon will put the code the way you found it.
+If you mess up, not to worry! The ⟲ icon will put the code back the way you found it.
 
 Finally, you can copy your masterpieces to the clipboard with the Copy button.
 
 Happy coding!
 
-\[^1\]: Almost anything. The code must compile inside a minute, and there are no networking features supported.
+\[^1\]: Almost anything. The code must compile within a minute, and there are no networking features supported.
 
 ![How to run a Tari Node on Windows 10](https://tari.com/assets/lessons/img/learn-how-tari-works-2.png)[How to run a Tari Node on Windows 10](https://tari.com/lessons/00a_Execute_Tari_Node_Windows_10) [Read More](https://tari.com/lessons/00a_Execute_Tari_Node_Windows_10)
 
