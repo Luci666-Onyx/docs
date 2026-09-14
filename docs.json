@@ -23,7 +23,8 @@
     "primary": {
       "type": "github",
       "href": "https://github.com/tari-project/tari"
-    }
+    },
+    "links": []
   },
   "navigation": {
     "tabs": [
