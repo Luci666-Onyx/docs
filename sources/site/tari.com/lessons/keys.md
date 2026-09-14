@@ -1,13 +1,10 @@
 ---
-sidebarTitle: "Introduction to Keys"
 title: "Introduction to Keys"
 ---
 
-# Introduction to Keys
-
 By Cayle Sharrock
 
-The [tari\_crypto](https://docs.rs/tari_crypto) crate carries the fundamental Tari cryptography primitives. It wraps the Ristretto elliptic curve, and provides ergonomic methods for using private and public keys, Pedersen commitments and digital signatures.
+The [tari\_crypto](https://docs.rs/tari_crypto) crate carries the fundamental Tari cryptography primitives. It wraps the Ristretto elliptic curve and provides ergonomic methods for using private and public keys, Pedersen commitments, and digital signatures.
 
 ```
 use tari_crypto::ristretto::{ RistrettoSecretKey as SecretKey, RistrettoPublicKey as PublicKey };

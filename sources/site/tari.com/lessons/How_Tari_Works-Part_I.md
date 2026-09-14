@@ -1,9 +1,6 @@
 ---
-sidebarTitle: "Introduction"
 title: "Introduction"
 ---
-
-# Learning the Tari Codebase
 
 By Cayle Sharrock
 

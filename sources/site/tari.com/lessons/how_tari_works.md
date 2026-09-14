@@ -1,9 +1,6 @@
 ---
-sidebarTitle: "How Tari Works - Part I"
 title: "How Tari Works - Part I"
 ---
-
-# How Tari Works - Part I
 
 By Cayle Sharrock
 
