@@ -184,7 +184,8 @@
     "dismissible": true,
     "type": "info",
     "color": {
-      "dark": "#9906b0"
+      "dark": "#6f0280",
+      "light": "#6f0280"
     }
   },
   "seo": {
