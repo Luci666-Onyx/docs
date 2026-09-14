@@ -7,7 +7,7 @@ title: "Obeisance of the Ootle"
 
 February 14, 2025
 
-Normally, the dev updates try to cover the multitude of projects Tari is tackling. Instead, for this one we’ll be taking a different approach. We'll be focusing on developments in the Ootle, which we didn’t get to cover [in our last update](https://app.mintlify.com/tari-d217ee87/tari-d217ee87/~/7b7bc0a6-9570-4b83-a956-b0cff451fb08), but not for lack of love. There’s a lot of attention on the Ootle right now in the Tari community, and significant progress is being made
+Normally, the dev updates try to cover the multitude of projects Tari is tackling. Instead, for this one we’ll be taking a different approach. We'll be focusing on developments in the Ootle, which we didn’t get to cover [in our last update](https://tari.com/updates/2025-01-24-update-141), but not for lack of love. There’s a lot of attention on the Ootle right now in the Tari community, and significant progress is being made
 
 The Ootle will be a core part of the Universe experience once it's live, and the success of Universe is pulling Ootle contributors directly into its orbit. Or gravity well. Actually, don’t worry about the metaphor; just check out their work below.
 
