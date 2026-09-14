@@ -60,41 +60,6 @@
         ]
       },
       {
-        "version": "Exchange Integration",
-        "groups": [
-          {
-            "group": "Overview",
-            "pages": [
-              "exchange/overview",
-              "exchange/architecture"
-            ]
-          },
-          {
-            "group": "Setup",
-            "pages": [
-              "exchange/node-setup",
-              "exchange/wallet-setup",
-              "exchange/security"
-            ]
-          },
-          {
-            "group": "Operations",
-            "pages": [
-              "exchange/deposits",
-              "exchange/withdrawals",
-              "exchange/troubleshooting"
-            ]
-          },
-          {
-            "group": "API Reference",
-            "pages": [
-              "exchange/api/wallet-grpc",
-              "exchange/api/node-grpc"
-            ]
-          }
-        ]
-      },
-      {
         "version": "Ootle (L2)",
         "groups": [
           {
@@ -142,6 +107,41 @@
           "sources/site/tari.com/lessons/03_signatures",
           "sources/site/tari.com/lessons/05_emoji_id",
           "sources/site/tari.com/lessons/06_tari_comms_i"
+        ]
+      },
+      {
+        "version": "Exchange Integration",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "exchange/overview",
+              "exchange/architecture"
+            ]
+          },
+          {
+            "group": "Setup",
+            "pages": [
+              "exchange/node-setup",
+              "exchange/wallet-setup",
+              "exchange/security"
+            ]
+          },
+          {
+            "group": "Operations",
+            "pages": [
+              "exchange/deposits",
+              "exchange/withdrawals",
+              "exchange/troubleshooting"
+            ]
+          },
+          {
+            "group": "API Reference",
+            "pages": [
+              "exchange/api/wallet-grpc",
+              "exchange/api/node-grpc"
+            ]
+          }
         ]
       },
       {
