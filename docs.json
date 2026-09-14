@@ -181,7 +181,7 @@
   "banner": {
     "content": "Ootle Live 11/11/2026",
     "dismissible": true,
-    "type": "info",
+    "type": "critical",
     "color": {
       "dark": "#6f0280",
       "light": "#6f0280"
