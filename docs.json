@@ -11,14 +11,6 @@
     "light": "#ffffff",
     "dark": "#343434"
   },
-  "fonts": {
-    "heading": {
-      "family": "Open Sans"
-    },
-    "body": {
-      "family": "Open Sans"
-    }
-  },
   "navbar": {
     "primary": {
       "type": "github",
@@ -57,7 +49,8 @@
               "node/networks"
             ]
           }
-        ]
+        ],
+        "default": true
       },
       {
         "version": "Ootle (L2)",
@@ -172,5 +165,8 @@
   "background": {
     "decoration": "gradient"
   },
-  "description": "Tari is an open, merge-mined digital currency and application platform where anyone can build, own, and exchange value — without permission from a bank, a platform, or a gatekeeper."
+  "description": "Tari is an open, merge-mined digital currency and application platform where anyone can build, own, and exchange value — without permission from a bank, a platform, or a gatekeeper.",
+  "interaction": {
+    "drilldown": false
+  }
 }
