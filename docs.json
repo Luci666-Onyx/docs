@@ -156,8 +156,8 @@
     }
   },
   "logo": {
-    "light": "/images/Tari-White@2x.png",
-    "dark": "/images/Tari-Black.svg",
+    "light": "/images/Tari-Black@2x.png",
+    "dark": "/images/Tari-White@2x.png",
     "href": "https://tari.com"
   },
   "appearance": {
