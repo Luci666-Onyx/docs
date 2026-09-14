@@ -1,5 +1,6 @@
 ---
 sidebarTitle: "Obeisance of the Ootle"
+title: "Obeisance of the Ootle"
 ---
 
 # Obeisance of the Ootle
