@@ -4,7 +4,7 @@ sidebarTitle: "Wallet Setup"
 description: "Download and run the Tari Ootle Wallet Daemon, create an account, and claim testnet funds to start publishing smart contract templates."
 ---
 
-Before you can publish a template or submit any transaction on the Ootle, you need a running wallet. The Tari Ootle Wallet Daemon (`tari_ootle_walletd`) is a lightweight background process that manages your keys, signs transactions, and exposes a web UI at `http://localhost:5100` for interacting with the network. This guide walks you through downloading the daemon, connecting to the Esmeralda testnet, creating your first account, and claiming test TARI from the built-in faucet.
+Before you can publish a template or submit any transaction on the Ootle, you need a running wallet. The Tari Ootle Wallet Daemon (`tari_ootle_walletd`) is a lightweight background process that manages your keys, signs transactions, and exposes a web UI at `http://127.0.0.1:5100` for interacting with the network. This guide walks you through downloading the daemon, connecting to the Esmeralda testnet, creating your first account, and claiming test TARI from the built-in faucet.
 
 <Note>
   The wallet daemon is primarily designed as a programmatic RPC service — for example, exchanges and back-end services use it internally. End-user wallets with friendlier interfaces are in active development. For testnet development, the daemon and its web UI are the recommended way to get started.
@@ -67,7 +67,7 @@ Once started, the daemon serves a web UI at **[http://127.0.0.1:5100](http://127
 By specifying the `esme` (Esmeralda) network, your wallet automatically connects to a testnet indexer. The indexer provides a view into the blockchain state — balances, transactions, and on-chain data — without you needing to run a full validator node.
 
 <Tip>
-  The public Igor testnet nodes are also available if you need to inspect raw validator or indexer state directly:
+  The public Esmeralda testnet nodes are also available if you need to inspect raw validator or indexer state directly:
   - **Validator Node:** http://18.217.22.26:12006
   - **Indexer:** http://18.217.22.26:12502
 </Tip>

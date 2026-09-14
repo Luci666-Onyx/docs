@@ -203,7 +203,7 @@ Set a monetary threshold above which every withdrawal requires explicit approval
 
 Never allow users to withdraw to an interactive Tari address. You can detect interactive addresses by inspecting the features byte of the address — an interactive address has bit 1 set (hex `0x02`). Reject any address with this flag:
 
-```
+```text
 // Features byte breakdown:
 // 0b0000_0001 = ONE_SIDED
 // 0b0000_0010 = INTERACTIVE  ← reject these

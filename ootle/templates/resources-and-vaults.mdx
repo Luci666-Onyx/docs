@@ -1,5 +1,5 @@
 ---
-title: "Resources, Vaults, and Buckets in Ootle Templates"
+title: "Ootle Template Resources: Vaults, Buckets, and Tokens"
 sidebarTitle: "Resources & Vaults"
 description: "Manage on-chain assets in Ootle templates using ResourceBuilder to mint tokens, Vaults to store them, and Buckets to transfer them."
 ---
@@ -26,12 +26,20 @@ There are four kinds of resource:
 use tari_template_lib::prelude::*;
 
 pub fn create_fungible_token() -> ResourceAddress {
+    // build() creates the resource and returns its address (no initial supply)
     ResourceBuilder::public_fungible()
         .with_token_symbol("MFT")           // typically 3–5 characters
         .metadata("url", "https://token.example")
-        .with_divisibility(10)              // decimal places (default: 8)
-        .initial_supply(Amount(1_000_000)) // mint 1,000,000 tokens immediately
+        .with_divisibility(10)              // decimal places (default: 18)
         .build()
+}
+
+pub fn create_fungible_with_supply() -> Bucket {
+    // initial_supply() is the terminal call — it creates the resource
+    // and returns a Bucket containing the minted tokens.
+    ResourceBuilder::public_fungible()
+        .with_token_symbol("MFT")
+        .initial_supply(Amount(1_000_000))
 }
 ```
 
@@ -70,19 +78,20 @@ pub fn create_nft_resource() -> ResourceAddress {
 ```rust NFT with Initial Supply
 use tari_template_lib::prelude::*;
 
-pub fn create_nft_with_supply() -> (ResourceAddress, Bucket) {
-    // initial_supply for NFTs returns a Bucket containing the minted tokens
-    let (resource_address, bucket) = ResourceBuilder::non_fungible()
+pub fn create_nft_with_supply() -> Bucket {
+    // initial_supply_with_data() creates the resource and returns a Bucket
+    // containing the minted NFTs. To get the ResourceAddress later, call
+    // bucket.resource_address() or store it from build() separately.
+    ResourceBuilder::non_fungible()
         .metadata("name", "Game Items")
         .with_token_symbol("ITEM")
-        .initial_supply(vec![
+        .initial_supply_with_data(vec![
             (
                 NonFungibleId::from_string("sword-001"),
                 &metadata!["rarity" => "rare", "damage" => "50"],
                 &(), // empty mutable data
             ),
-        ]);
-    (resource_address, bucket)
+        ])
 }
 ```
 
@@ -147,8 +156,9 @@ pub struct TokenVault {
 
 impl TokenVault {
     pub fn new(initial_supply: Amount) -> Component<Self> {
-        // Create a fungible token resource with an initial supply
-        let (token_address, token_bucket) = ResourceBuilder::public_fungible()
+        // initial_supply() returns a Bucket directly — not a tuple.
+        // Use Vault::from_bucket to store it immediately.
+        let token_bucket = ResourceBuilder::public_fungible()
             .with_token_symbol("TVT")
             .initial_supply(initial_supply);
 
@@ -267,7 +277,7 @@ impl MyComponent {
 
 ## ResourceAddress
 
-Every resource has a `ResourceAddress` — a permanent, unique on-chain identifier for that resource type. When you create a resource with `ResourceBuilder`, the address is returned from `.build()` (or included with the bucket when using `.initial_supply()`).
+Every resource has a `ResourceAddress` — a permanent, unique on-chain identifier for that resource type. When you create a resource with `ResourceBuilder`, the address is returned from `.build()`. If you use `.initial_supply()` instead, you receive a `Bucket`; retrieve the address afterwards via `bucket.resource_address()` or `vault.resource_address()` once the bucket is deposited.
 
 You typically store the `ResourceAddress` in your component state so you can reference it later:
 
@@ -280,9 +290,14 @@ pub struct MyComponent {
 
 impl MyComponent {
     pub fn new() -> Component<Self> {
-        let (token_address, initial_bucket) = ResourceBuilder::public_fungible()
+        // Use build() to get the ResourceAddress first,
+        // then mint the initial supply separately.
+        let token_address = ResourceBuilder::public_fungible()
             .with_token_symbol("MCT")
-            .initial_supply(Amount(1_000_000));
+            .build();
+
+        let initial_bucket = ResourceManager::get(token_address)
+            .mint(Amount(1_000_000));
 
         Component::new(Self {
             token_address,

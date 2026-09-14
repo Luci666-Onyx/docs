@@ -1,5 +1,5 @@
 ---
-title: "Wallet gRPC API Reference for Minotari"
+title: "Minotari Console Wallet gRPC Methods and API Reference"
 sidebarTitle: "Wallet gRPC"
 description: "Complete reference for the Minotari Console Wallet gRPC API: balance, addresses, payment IDs, transactions, transfers, and streaming events."
 ---
@@ -192,7 +192,8 @@ The `payment_id` is encrypted using the public keys of the address and is invisi
 <CodeGroup>
 ```bash grpcurl
 PAYMENT_ID="deposit-user123-$(date +%s)"
-PAYMENT_ID_B64=$(echo -n "$PAYMENT_ID" | base64 -w 0)
+# base64: tr -d '\n' strips line-wrapping on both Linux and macOS
+PAYMENT_ID_B64=$(printf '%s' "$PAYMENT_ID" | base64 | tr -d '\n')
 grpcurl -plaintext \
   -d "{\"payment_id\": \"$PAYMENT_ID_B64\"}" \
   localhost:18143 tari.rpc.Wallet/GetPaymentIdAddress

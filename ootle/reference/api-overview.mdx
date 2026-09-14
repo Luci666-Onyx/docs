@@ -249,7 +249,7 @@ pub fn transfer(&mut self, to: ComponentAddress, amount: Amount) {
     let bucket = self.vault.withdraw(amount);
     ComponentManager::get(to).invoke("deposit", args![bucket]);
 
-    emit_event("transfer", metadata![
+    emit_event!("transfer", metadata![
         "from"   => CallerContext::transaction_signer_public_key().to_string(),
         "to"     => to.to_string(),
         "amount" => amount.to_string(),

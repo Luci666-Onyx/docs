@@ -1,5 +1,5 @@
 ---
-title: "What is Tari? Privacy-First Blockchain Protocol"
+title: "Tari: An Open-Source, Privacy-First Blockchain Protocol"
 sidebarTitle: "Introduction"
 description: "Tari is an open-source, proof-of-work blockchain with a two-layer architecture: Minotari for mining XTM and the Ootle for smart contracts."
 ---
@@ -40,12 +40,15 @@ Tari introduces several design choices that set it apart from other blockchain p
 
 Tari ships a suite of software tools so you can participate in the network without needing deep technical expertise.
 
-| Product | What it does |
-|---|---|
-| **Tari Universe** | A desktop mining application that makes participating in Minotari mining as simple as downloading an app |
-| **Minotari Console Wallet** | A command-line wallet for sending, receiving, and managing your XTM |
-| **Minotari Base Node** | The software that connects you to the Minotari peer-to-peer network and validates the blockchain |
-| **The Ootle** | Tari's Layer 2 smart contract network where you can deploy and interact with decentralised applications |
+| Binary | Product | What it does |
+|---|---|---|
+| — | **Tari Universe** | A desktop mining application that makes participating in Minotari mining as simple as downloading an app |
+| `minotari_node` | **Minotari Base Node** | Connects you to the Minotari peer-to-peer network, validates the blockchain, and exposes a gRPC API on port 18142 |
+| `minotari_console_wallet` | **Minotari Console Wallet** | A terminal wallet for sending, receiving, and managing your XTM, with a gRPC API on port 18143 |
+| `minotari_miner` | **Minotari Miner** | A standalone SHA3x miner that connects to a running base node |
+| `minotari_merge_mining_proxy` | **Merge Mining Proxy** | Lets you mine Tari and Monero simultaneously via XMRig, earning rewards on both networks |
+| `minotari_offline_signer` | **Offline Signer** | Signs one-sided transactions on an air-gapped machine for maximum security |
+| `tari_ootle_walletd` | **Ootle Wallet Daemon** | The Layer 2 wallet service for managing TARI tokens and interacting with Ootle smart contracts |
 
 ## Where to Go Next
 

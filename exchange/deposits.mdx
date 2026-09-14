@@ -1,5 +1,5 @@
 ---
-title: "Monitor Deposits and Credit User Accounts for XTM"
+title: "Monitor XTM Deposits and Credit Exchange User Accounts"
 sidebarTitle: "Deposits"
 description: "Generate per-user deposit addresses with Payment IDs, stream incoming transactions, and reliably credit user accounts in your exchange."
 ---
@@ -24,8 +24,10 @@ Use a cryptographically random suffix (at least 8 bytes) alongside the timestamp
 
 ```bash
 PAYMENT_ID="deposit-user123-$(date +%s)"
-PAYMENT_ID_B64=$(echo -n "$PAYMENT_ID" | base64 -w 0)
-grpcurl -plaintext -d "{\"payment_id\": \"$PAYMENT_ID_B64\"}" \
+# base64: use -w0 on Linux, omit flag on macOS (both produce unwrapped output)
+PAYMENT_ID_B64=$(printf '%s' "$PAYMENT_ID" | base64 | tr -d '\n')
+grpcurl -plaintext \
+  -d "{\"payment_id\": \"$PAYMENT_ID_B64\"}" \
   localhost:18143 tari.rpc.Wallet/GetPaymentIdAddress
 ```
 
@@ -47,7 +49,7 @@ Return the `one_sided_address_base58` and `one_sided_address_emoji` fields to th
 
 ### Monitor for incoming transactions
 
-Your monitoring service must run continuously and catch every inbound transaction associated with your walletю There are two approaches; use streaming whenever possible and fall back to polling if the connection is interrupted.
+Your monitoring service must run continuously and catch every inbound transaction associated with your wallet. There are two approaches; use streaming whenever possible and fall back to polling if the connection is interrupted.
 
 **Method 1 — Real-time streaming (preferred):**
 

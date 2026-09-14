@@ -1,5 +1,5 @@
 ---
-title: "Set Up a Minotari Base Node for Your Exchange"
+title: "Set Up a Minotari Base Node for Exchange Integration"
 sidebarTitle: "Node Setup"
 description: "Install and configure a Minotari base node for exchange operations. Covers binary installation, first run, network selection, and gRPC setup."
 ---
@@ -27,6 +27,10 @@ Before you start, ensure your server meets the following requirements:
 | `18141` | TCP | Inbound from trusted peers | P2P network traffic |
 | `18142` | TCP | Localhost only | gRPC API |
 
+<Note>
+  Run through this setup on **Testnet (Esmeralda)** first. Testnet uses the same binaries and commands as Mainnet — only the network identifier in your config file changes. This lets you exercise the full setup flow, verify gRPC, and test your deposit and withdrawal logic before committing to a production deployment.
+</Note>
+
 <Steps>
 
 ### Download the Minotari binaries
@@ -36,8 +40,9 @@ Download the pre-compiled release binaries for your platform from [tari.com/down
 On Linux, the install sequence is:
 
 ```bash
-# Download the latest release archive (replace the URL with the specific version you want)
-curl -L https://github.com/tari-project/tari/releases/latest/download/minotari-linux-x86_64.tar.gz \
+# Download a specific release (replace X.Y.Z with the version you want to pin to)
+# Check https://github.com/tari-project/tari/releases for available versions
+curl -L https://github.com/tari-project/tari/releases/download/vX.Y.Z/minotari-linux-x86_64.tar.gz \
   -o minotari.tar.gz
 
 # Extract the archive
@@ -52,7 +57,7 @@ minotari_node --version
 
 You should see output similar to:
 
-```
+```text
 minotari_node 1.x.x
 ```
 
@@ -83,7 +88,7 @@ whoami
 
 The node prints your **Public Key**, **Node ID**, and **Public Address** — for example:
 
-```
+```text
 Public Key: 90f67a04edcb36261e6304ca213629d183c44e26bd47e38c253473f44d901733
 Node ID: e8ed9a4fd38577b6b01e3b8e9d
 Public Addresses: /onion3/f5qbkkfkoxowzvshe5mppzpgiiy76cwumpsacungeldoal6hehcgzfqd:18141
