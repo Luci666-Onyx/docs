@@ -89,9 +89,6 @@
         ]
       },
       {
-        "version": "Lessons"
-      },
-      {
         "version": "Exchange Integration",
         "groups": [
           {
@@ -125,9 +122,6 @@
             ]
           }
         ]
-      },
-      {
-        "version": "Updates"
       }
     ]
   },
