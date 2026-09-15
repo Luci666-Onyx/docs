@@ -89,17 +89,7 @@
         ]
       },
       {
-        "version": "Lessons",
-        "pages": [
-          "sources/site/tari.com/lessons/How_Tari_Works-Part_I",
-          "sources/site/tari.com/lessons/Execute_Tari_Node_Windows_10",
-          "sources/site/tari.com/lessons/keys",
-          "sources/site/tari.com/lessons/how_tari_works",
-          "sources/site/tari.com/lessons/04_how_tari_works_ii",
-          "sources/site/tari.com/lessons/03_signatures",
-          "sources/site/tari.com/lessons/05_emoji_id",
-          "sources/site/tari.com/lessons/06_tari_comms_i"
-        ]
+        "version": "Lessons"
       },
       {
         "version": "Exchange Integration",
@@ -137,11 +127,7 @@
         ]
       },
       {
-        "version": "Updates",
-        "pages": [
-          "sources/site/tari.com/updates/2026-09-01-update-143",
-          "sources/site/tari.com/updates/Obeisance-of-the-Ootle"
-        ]
+        "version": "Updates"
       }
     ]
   },
