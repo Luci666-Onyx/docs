@@ -132,16 +132,16 @@
               "exchange/api/wallet-grpc",
               "exchange/api/node-grpc"
             ]
-          },
-          {
-            "group": "Reference",
-            "pages": [
-              "smart-contract-address",
-              "user-agreement",
-              "privacy-policy",
-              "bug-bounty"
-            ]
           }
+        ]
+      },
+      {
+        "version": "Reference",
+        "pages": [
+          "smart-contract-address",
+          "user-agreement",
+          "privacy-policy",
+          "bug-bounty"
         ]
       }
     ]
