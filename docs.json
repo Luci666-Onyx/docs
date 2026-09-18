@@ -97,19 +97,19 @@
               "ootle/reference/api-overview",
               "ootle/reference/types"
             ]
-          }
-        ]
-      },
-      {
-        "version": "Exchange Integration",
-        "groups": [
+          },
           {
             "group": "Overview",
             "pages": [
               "exchange/overview",
               "exchange/architecture"
             ]
-          },
+          }
+        ]
+      },
+      {
+        "version": "Exchange Integration",
+        "groups": [
           {
             "group": "Setup",
             "pages": [
@@ -131,6 +131,15 @@
             "pages": [
               "exchange/api/wallet-grpc",
               "exchange/api/node-grpc"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "smart-contract-address",
+              "user-agreement",
+              "privacy-policy",
+              "bug-bounty"
             ]
           }
         ]
