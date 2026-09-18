@@ -4,7 +4,7 @@ sidebarTitle: "How It Works"
 description: "Understand Tari's dual-layer architecture: Layer 1 proof-of-work mining with XTM rewards and Layer 2 smart contracts powered by the Turbine Model."
 ---
 
-Tari is a two-layer blockchain protocol designed to combine the security and decentralisation of proof-of-work mining with the flexibility of a programmable smart contract network. The two layers — Minotari and the Ootle — are economically and cryptographically linked, giving you a system where base-layer privacy and Layer 2 expressiveness reinforce each other rather than compete. This page walks you through how each layer works and the key mechanisms that tie them together.
+Tari is a two-layer blockchain protocol designed to combine the security and decentralization of proof-of-work mining with the flexibility of a programmable smart contract network. The two layers — Minotari and the Ootle — are economically and cryptographically linked, giving you a system where base-layer privacy and Layer 2 expressiveness reinforce each other rather than compete. This page walks you through how each layer works and the key mechanisms that tie them together.
 
 ## Layer 1 — Minotari
 
@@ -22,20 +22,20 @@ Minotari is unusual in that it runs **four independent mining lanes simultaneous
 |---|---|---|
 | **RandomX Merge-Mined (RxM)** | CPU | Merge-mined alongside Monero — XTM miners can earn rewards on both networks at once |
 | **RandomX Tari-Native (RxT)** | CPU | A Tari-exclusive RandomX lane; not linked to Monero's chain |
-| **SHA3x** | GPU / ASIC | A SHA-3-based algorithm designed for GPU and specialised hardware |
+| **SHA3x** | GPU / ASIC | A SHA-3-based algorithm designed for GPU and specialized hardware |
 | **Cuckaroo (C29)** | GPU | A memory-hard Cuckoo Cycle variant tuned for GPU miners |
 
-Because each algorithm gets an equal share of block rewards, Minotari avoids giving any single hardware category a dominant economic advantage. This encourages a broader and more decentralised mining community.
+Because each algorithm gets an equal share of block rewards, Minotari avoids giving any single hardware category a dominant economic advantage. This encourages a broader and more decentralized mining community.
 
 ### Block Reward Emission
 
-Tari's block reward does **not** follow a Bitcoin-style halving schedule. Instead, rewards decay **block-by-block** via an exponential decay function, creating a smooth, continuous decline rather than dramatic step changes every four years. Roughly every three years the reward approximately halves, but the transition is gradual rather than sudden.
+Tari's block reward does **not** follow a Bitcoin-style halving schedule. Instead, rewards decay **block-by-block** via an exponential decay function, creating a smooth, continuous decline rather than dramatic step changes every four years. Roughly every three years, the reward approximately halves, but the transition is gradual rather than sudden.
 
 After annual emissions drop to approximately **1% of the total XTM supply**, Minotari switches to a **perpetual 1% annual tail emission**. This tail emission ensures that miners always have an incentive to secure the network, even after the bulk of the initial supply has been distributed.
 
 ## Layer 2 — The Ootle
 
-The Ootle is Tari's smart contract network. It gives you a programmable environment for building decentralised applications, managing digital assets, and executing complex on-chain logic — all backed by the security of Minotari's proof-of-work base layer.
+The Ootle is Tari's smart contract network. It gives you a programmable environment for building decentralized applications, managing digital assets, and executing complex on-chain logic — all backed by the security of Minotari's proof-of-work base layer.
 
 ### The TARI Token
 
@@ -75,7 +75,7 @@ This makes Tari's user experience much closer to how you would expect a payment 
 
 ## The Tari DHT Network
 
-Tari nodes communicate over a **peer-to-peer network** built on a Kademlia-based **distributed hash table (DHT)**. This gives the network decentralised peer discovery and message routing without relying on any central coordination server.
+Tari nodes communicate over a **peer-to-peer network** built on a Kademlia-based **distributed hash table (DHT)**. This gives the network decentralized peer discovery and message routing without relying on any central coordination server.
 
 ### Tor Integration
 
