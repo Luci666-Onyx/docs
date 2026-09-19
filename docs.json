@@ -52,18 +52,6 @@
         "default": true
       },
       {
-        "version": "RFC",
-        "pages": [
-          "untitled-page",
-          "untitled-page-2",
-          "untitled-page-3",
-          "untitled-page-4",
-          "untitled-page-5",
-          "untitled-page-6",
-          "untitled-page-7"
-        ]
-      },
-      {
         "version": "Ootle (L2)",
         "groups": [
           {
@@ -133,6 +121,18 @@
               "exchange/api/node-grpc"
             ]
           }
+        ]
+      },
+      {
+        "version": "RFC",
+        "pages": [
+          "untitled-page",
+          "untitled-page-2",
+          "untitled-page-3",
+          "untitled-page-4",
+          "untitled-page-5",
+          "untitled-page-6",
+          "untitled-page-7"
         ]
       },
       {
