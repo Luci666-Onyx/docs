@@ -138,9 +138,9 @@
       {
         "version": "Contact",
         "pages": [
-          "Contact/support",
           "pr-and-marketing",
-          "business-development"
+          "business-development",
+          "Contact/support"
         ]
       },
       {
