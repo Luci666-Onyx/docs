@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "name": "Tari",
-  "theme": "luma",
+  "theme": "mint",
   "favicon": {
     "light": "/images/Tari-White.svg",
     "dark": "/images/Tari-Black.svg"
@@ -178,7 +178,7 @@
   },
   "description": "Tari is an open, merge-mined digital currency and application platform where anyone can build, own, and exchange value — without permission from a bank, a platform, or a gatekeeper.",
   "interaction": {
-    "drilldown": false
+    "drilldown": true
   },
   "metadata": {
     "timestamp": false
@@ -186,15 +186,6 @@
   "styling": {
     "eyebrows": "section",
     "latex": true
-  },
-  "banner": {
-    "content": "Ootle Live 11/11/2026",
-    "dismissible": true,
-    "type": "critical",
-    "color": {
-      "dark": "#6f0280",
-      "light": "#6f0280"
-    }
   },
   "seo": {
     "indexing": "all"
