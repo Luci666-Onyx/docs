@@ -23,7 +23,7 @@
         "version": "Get Started",
         "groups": [
           {
-            "group": "Introduction",
+            "group": "Overview",
             "pages": [
               "introduction",
               "how-tari-works",
@@ -147,9 +147,9 @@
         "version": "Legal documentation",
         "pages": [
           "smart-contract-address",
-          "user-agreement",
+          "bug-bounty",
           "privacy-policy",
-          "bug-bounty"
+          "user-agreement"
         ]
       }
     ]
