@@ -136,6 +136,13 @@
         ]
       },
       {
+        "version": "Contact",
+        "pages": [
+          "Contact/support",
+          "pr-and-marketing"
+        ]
+      },
+      {
         "version": "Legal documentation",
         "pages": [
           "smart-contract-address",
