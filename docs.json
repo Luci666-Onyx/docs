@@ -193,7 +193,9 @@
   "contextual": {
     "options": [
       "copy",
-      "assistant"
+      "chatgpt",
+      "claude",
+      "cursor"
     ],
     "display": "header"
   }
