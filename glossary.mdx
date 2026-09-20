@@ -2,93 +2,93 @@
 title: "Glossary"
 ---
 
-# [**Tari Network Terminology**](https://rfc.tari.com/Glossary#tari-network-terminology)
+# **Tari Network Terminology**
 
 Below is a list of terms and their definitions that are used throughout the Tari code and documentation. Let’s use this glossary to disambiguate ideas and work towards a [**ubiquitous language**](https://blog.carbonfive.com/2016/10/04/ubiquitous-language-the-joy-of-naming/) for this project.
 
-## [**Archive node**](https://rfc.tari.com/Glossary#archive-node)
+## **Archive node**
 
 This is a full history [**base node**](https://rfc.tari.com/Glossary#base-node "A full Tari node running on the base layer, validating and propagating Tari coin transactions
 and blocks"). It will keep a complete history of every transaction ever received, and it will not implement pruning.
 
-## [**AssetCollateral**](https://rfc.tari.com/Glossary#assetcollateral)
+## **AssetCollateral**
 
 The amount of tari coin that a [**Validator Node**](https://rfc.tari.com/Glossary#validator-node "A second-layer node that manages and validates digital asset state transitions") must put up on the [**base layer**](https://rfc.tari.com/Glossary#base-layer "The Tari layer handling payments and secured by proof of work") to become part of an asset [**committee**](https://rfc.tari.com/Glossary#committee "A group of validator nodes that are responsible for managing a specific Digital Asset").
 
-## [**Asset Issuer**](https://rfc.tari.com/Glossary#asset-issuer)
+## **Asset Issuer**
 
 An entity that creates digital assets on the Tari DAN. The Asset Issuer will specify the parameters of the contract template that defines the rules that govern the asset and the number and nature of its constituent tokens on issuance. The Asset Issuer will, generally, be the initial owner of the tokens.
 
-## [**Bad Actor**](https://rfc.tari.com/Glossary#bad-actor)
+## **Bad Actor**
 
 A participant that acts maliciously or negligently to the detriment of the network or another participant.
 
-## [**Base layer**](https://rfc.tari.com/Glossary#base-layer)
+## **Base layer**
 
 The Tari Base layer is a merge-mined [**blockchain**](https://rfc.tari.com/Glossary#blockchain "The linked sequence of Tari blocks on the Tari base layer") secured by proof-of-work. The base layer is primarily responsible for the emission of new Tari, for securing and managing [**Tari coin**](https://rfc.tari.com/Glossary#tari-coin "The base layer token") transfers.
 
-## [**Base Node**](https://rfc.tari.com/Glossary#base-node)
+## **Base Node**
 
 A full Tari node running on the base layer. Its primary role is validating and propagating [**Tari coin**](https://rfc.tari.com/Glossary#tari-coin "The base layer token") transactions and blocks to the rest of the network.
 
-## [**Block**](https://rfc.tari.com/Glossary#block)
+## **Block**
 
 A collection of transactions and associated metadata recorded as a single entity in the Tari blockchain. The ordering of Tari transactions is set purely by the block height of the block they are recorded in.
 
-## [**Block Header**](https://rfc.tari.com/Glossary#block-header)
+## **Block Header**
 
 A data structure that validates the information contained in a [**block**](https://rfc.tari.com/Glossary#block "A collection of transactions and associated metadata recorded as a single entity in the Tari blockchain").
 
-## [**Block Body**](https://rfc.tari.com/Glossary#block-body)
+## **Block Body**
 
 A data structure containing the transaction inputs, outputs, and kernels that make up the block.
 
-## [**Block reward**](https://rfc.tari.com/Glossary#block-reward)
+## **Block reward**
 
 The amount of Tari created by the coinbase transaction in every block. The block reward is set by the [**emission schedule**](https://rfc.tari.com/Glossary#emission-schedule).
 
-## [**Blockchain**](https://rfc.tari.com/Glossary#blockchain)
+## **Blockchain**
 
 A sequence of Tari [**block**](https://rfc.tari.com/Glossary#block "A collection of transactions and associated metadata recorded as a single entity in the Tari blockchain")s. Each block contains a hash of the previous valid block. Thus the blocks form a chain with the property that changing anything in a block other than the head block requires rewriting the entire blockchain from that point on.
 
-## [**Blockchain state**](https://rfc.tari.com/Glossary#blockchain-state)
+## **Blockchain state**
 
 The complete state of the blockchain at a specific block height. This means a pruned **UTXO** set, a complete set of kernels and headers up to that block height from the genesis block.
 
-## [**BroadcastStrategy**](https://rfc.tari.com/Glossary#broadcaststrategy)
+## **BroadcastStrategy**
 
 A strategy for propagating messages amongst nodes in a peer-to-peer network. Example implementations of `BroadcastStrategy` include the Gossip protocol and flood fill.
 
-## [**Chain Reorganization**](https://rfc.tari.com/Glossary#chain-reorganization)
+## **Chain Reorganization**
 
 A chain reorganization occurs after a chain split occurs on the network, which commonly occurs due to network latency and connectivity issues. When a chain split occurs, one chain will have the higher accumulated proof-of-work; this chain is considered the best chain. Nodes on the poorer chain will need to rewind and resync their chains to the best chain. In this process, transactions in the mempool could become orphaned or invalid.
 
-## [**Checkpoint**](https://rfc.tari.com/Glossary#checkpoint)
+## **Checkpoint**
 
 A hash of the state of a Digital Asset that is recorded on the base layer.
 
-## [**Coinbase transaction**](https://rfc.tari.com/Glossary#coinbase-transaction)
+## **Coinbase transaction**
 
 The first transaction in every Tari block yields a [**Block Reward**](https://rfc.tari.com/Glossary#block-reward "The amount of Tari created in every block") according to the Tari [**emission Schedule**](https://rfc.tari.com/Glossary#emission-schedule) and is awarded to the miner that performed the Proof of Work for the block.
 
-## [**Coinbase extra**](https://rfc.tari.com/Glossary#coinbase-extra)
+## **Coinbase extra**
 
 An arbitrary 64 bytes can be included with the coinbase utxo and can be used to store any data. This can be used to identify the pool that mined the block, for example or a Merkle root used when merge mining with Tari as the parent chain.
 
-## [**Committee**](https://rfc.tari.com/Glossary#committee)
+## **Committee**
 
 A group of [**Validator Node**](https://rfc.tari.com/Glossary#validator-node "A second-layer node that manages and validates digital asset state transitions")s that are responsible for managing the state of a specific [**Digital Asset**](https://rfc.tari.com/Glossary#digital-asset "Sets of Native digital tokens, both fungible and non-fungible that are created by
 asset issuers on the Tari 2nd layer"). A committee is selected during asset issuance and can be updated at [**Checkpoint**](https://rfc.tari.com/Glossary#checkpoint "A summary of the state of a Digital Asset that is recorded on the base layer")s.
 
-## [**CommitteeSelectionStrategy**](https://rfc.tari.com/Glossary#committeeselectionstrategy)
+## **CommitteeSelectionStrategy**
 
 A strategy for an Asset Issuer to select candidates for the committee from the available registered Validator Nodes who responded to the nomination call for that asset.
 
-## [**ConsensusStrategy**](https://rfc.tari.com/Glossary#consensusstrategy)
+## **ConsensusStrategy**
 
 The approach that will be taken for a committee to reach consensus on the validity of instructions that are performed on a given Digital Asset.
 
-## [**Commitment**](https://rfc.tari.com/Glossary#commitment)
+## **Commitment**
 
 A commitment is a cryptographic primitive that allows one to commit to a chosen value while keeping it hidden from others, with the ability to reveal the committed value later. Commitments are designed so that one cannot change the value or statement after they have committed to it.
 
