@@ -193,9 +193,6 @@
   "contextual": {
     "options": [
       "copy",
-      "chatgpt",
-      "perplexity",
-      "claude",
       "assistant"
     ],
     "display": "header"
