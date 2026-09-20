@@ -178,7 +178,7 @@
   },
   "description": "Tari is an open, merge-mined digital currency and application platform where anyone can build, own, and exchange value — without permission from a bank, a platform, or a gatekeeper.",
   "interaction": {
-    "drilldown": false
+    "drilldown": true
   },
   "metadata": {
     "timestamp": false
